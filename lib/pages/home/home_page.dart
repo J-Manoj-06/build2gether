@@ -682,6 +682,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       onPressed: () {
                         // Handle AI chat
+                        Navigator.pushNamed(context, AppRoutes.aiChat);
                       },
                     ),
                   ),
