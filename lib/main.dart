@@ -5,8 +5,16 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
-import 'app.dart';
+import 'core/theme.dart';
+import 'providers/auth_provider.dart';
+import 'providers/product_provider.dart';
+import 'providers/recommendation_provider.dart';
+import 'pages/splash/splash_screen.dart';
+import 'pages/auth/farmer_login_page.dart';
+import 'pages/auth/register_page.dart';
+import 'pages/main/main_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,4 +23,30 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => RecommendationProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Uzhavu Sei AI',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        home: const SplashScreen(),
+        routes: {
+          '/login': (context) => const FarmerLoginPage(),
+          '/register': (context) => const RegisterPage(),
+          '/main': (context) => const MainPage(),
+        },
+      ),
+    );
+  }
 }
