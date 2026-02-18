@@ -15,7 +15,6 @@ class MarketplacePage extends StatefulWidget {
 
 class _MarketplacePageState extends State<MarketplacePage> {
   String _selectedCategory = 'All';
-  int _currentIndex = 1;
   int _cartItemCount = 2;
 
   // Colors matching the HTML design
@@ -97,50 +96,35 @@ class _MarketplacePageState extends State<MarketplacePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundLight,
-      body: Stack(
+      body: Column(
         children: [
-          Column(
-            children: [
-              // Sticky Header
-              _buildHeader(),
+          // Sticky Header
+          _buildHeader(),
 
-              // Main Content
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 24),
+          // Main Content
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const SizedBox(height: 24),
 
-                      // Search Bar
-                      _buildSearchBar(),
+                  // Search Bar
+                  _buildSearchBar(),
 
-                      const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                      // Horizontal Categories
-                      _buildCategoriesBar(),
+                  // Horizontal Categories
+                  _buildCategoriesBar(),
 
-                      const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                      // Product Grid
-                      _buildProductGrid(),
+                  // Product Grid
+                  _buildProductGrid(),
 
-                      const SizedBox(height: 120),
-                    ],
-                  ),
-                ),
+                  const SizedBox(height: 90),
+                ],
               ),
-            ],
-          ),
-
-          // Floating Action Button
-          Positioned(bottom: 110, right: 24, child: _buildFAB()),
-
-          // Bottom Navigation
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildBottomNavigation(),
+            ),
           ),
         ],
       ),
@@ -360,7 +344,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
           Stack(
             children: [
               Container(
-                height: 160,
+                height: 140,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: accentLight,
@@ -372,7 +356,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 child: Center(
                   child: Icon(
                     product['icon'] as IconData,
-                    size: 50,
+                    size: 45,
                     color: primaryColor.withOpacity(0.4),
                   ),
                 ),
@@ -423,46 +407,54 @@ class _MarketplacePageState extends State<MarketplacePage> {
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Product Name
                   Text(
                     product['name'] as String,
                     style: const TextStyle(
                       color: textDark,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+
+                  const SizedBox(height: 4),
 
                   // Rating
                   Row(
                     children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 16),
+                      const Icon(Icons.star, color: Colors.amber, size: 14),
                       const SizedBox(width: 4),
                       Text(
                         product['rating'].toString(),
                         style: const TextStyle(
                           color: textGray,
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
 
+                  const Spacer(),
+
                   // Price and Add Button
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        '₹${product['price']}',
-                        style: const TextStyle(
-                          color: primaryColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                      Flexible(
+                        child: Text(
+                          '₹${product['price']}',
+                          style: const TextStyle(
+                            color: primaryColor,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                       InkWell(
@@ -539,61 +531,6 @@ class _MarketplacePageState extends State<MarketplacePage> {
             child: Icon(Icons.add, color: Colors.white, size: 30),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigation() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[200]!)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 70,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(Icons.home_outlined, 'Home', 0),
-              _buildNavItem(Icons.storefront, 'Market', 1),
-              _buildNavItem(Icons.smart_toy_outlined, 'AI Advisor', 2),
-              _buildNavItem(Icons.person_outline, 'Profile', 3),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, int index) {
-    final isActive = _currentIndex == index;
-
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
-        // Handle navigation
-        if (index == 0) {
-          Navigator.pop(context); // Go back to home
-        }
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 24, color: isActive ? primaryColor : textGray),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: isActive ? primaryColor : textGray,
-            ),
-          ),
-        ],
       ),
     );
   }

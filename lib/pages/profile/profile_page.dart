@@ -89,11 +89,10 @@ class _ProfilePageState extends State<ProfilePage> {
             // Footer
             _buildFooter(),
 
-            const SizedBox(height: 100), // Space for bottom nav
+            const SizedBox(height: 90), // Space for bottom nav
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -387,93 +386,6 @@ class _ProfilePageState extends State<ProfilePage> {
           Text(
             'Version 1.0.0',
             style: TextStyle(color: Colors.grey[400], fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[100]!)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                icon: Icons.home_outlined,
-                label: 'Home',
-                isActive: false,
-                onTap: () {
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    AppRoutes.home,
-                    (route) => false,
-                  );
-                },
-              ),
-              _buildNavItem(
-                icon: Icons.eco_outlined,
-                label: 'Crops',
-                isActive: false,
-                onTap: () {
-                  // Handle crops navigation
-                },
-              ),
-              _buildNavItem(
-                icon: Icons.psychology_outlined,
-                label: 'AI Advisor',
-                isActive: false,
-                onTap: () {
-                  Navigator.pushNamed(context, AppRoutes.aiChat);
-                },
-              ),
-              _buildNavItem(
-                icon: Icons.person,
-                label: 'Profile',
-                isActive: true,
-                onTap: () {
-                  // Already on profile page
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 24,
-            color: isActive ? primaryColor : primaryColor.withOpacity(0.6),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-              color: isActive ? primaryColor : primaryColor.withOpacity(0.6),
-            ),
           ),
         ],
       ),

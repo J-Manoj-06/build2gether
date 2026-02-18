@@ -18,8 +18,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _currentIndex = 0;
-
   // Colors matching the HTML design
   static const Color primaryColor = Color(0xFF1C5F21);
   static const Color backgroundLight = Color(0xFFF5F7F6);
@@ -57,53 +55,40 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       backgroundColor: backgroundLight,
-      body: Stack(
+      body: Column(
         children: [
-          // Main Content
-          Column(
-            children: [
-              // Top Header Navigation
-              _buildHeader(userName),
+          // Top Header Navigation
+          _buildHeader(userName),
 
-              // Main Scrollable Content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // AI Recommendations Card
-                      _buildAIRecommendationCard(),
+          // Main Scrollable Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 90),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // AI Recommendations Card
+                  _buildAIRecommendationCard(),
 
-                      const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                      // Weather Card
-                      _buildWeatherCard(),
+                  // Weather Card
+                  _buildWeatherCard(),
 
-                      const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                      // Quick Actions Grid
-                      _buildQuickActionsSection(),
+                  // Quick Actions Grid
+                  _buildQuickActionsSection(),
 
-                      const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                      // Recent Activity
-                      _buildRecentActivitySection(),
+                  // Recent Activity
+                  _buildRecentActivitySection(),
 
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
+                  const SizedBox(height: 24),
+                ],
               ),
-            ],
-          ),
-
-          // Bottom Navigation Bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildBottomNavigationBar(),
+            ),
           ),
         ],
       ),
@@ -618,113 +603,6 @@ class _HomePageState extends State<HomePage> {
               color: Colors.grey[400],
               fontSize: 10,
               fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        border: Border(top: BorderSide(color: Colors.grey[100]!)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 80,
-          child: Stack(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(Icons.home, 'Home', 0, true),
-                  _buildNavItem(Icons.group_outlined, 'Community', 1, false),
-                  const SizedBox(width: 60), // Space for center button
-                  _buildNavItem(Icons.smart_toy_outlined, 'AI Chat', 3, false),
-                  _buildNavItem(
-                    Icons.account_circle_outlined,
-                    'Profile',
-                    4,
-                    false,
-                  ),
-                ],
-              ),
-
-              // Central AI Chat Button
-              Positioned(
-                left: 0,
-                right: 0,
-                top: -24,
-                child: Center(
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: primaryColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: backgroundLight, width: 4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryColor.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.chat_bubble_outline,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                      onPressed: () {
-                        // Handle AI chat
-                        Navigator.pushNamed(context, AppRoutes.aiChat);
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    IconData icon,
-    String label,
-    int index,
-    bool isActive, {
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap:
-          onTap ??
-          () {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 28,
-            color: isActive ? primaryColor : Colors.grey[400],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: isActive ? primaryColor : Colors.grey[400],
             ),
           ),
         ],
