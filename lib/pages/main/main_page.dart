@@ -4,7 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import '../home/home_page.dart';
+import '../home/dynamic_home_page.dart';
 import '../marketplace/marketplace_page.dart';
 import '../chat/ai_chat_page.dart';
 import '../alerts/alerts_page.dart';
@@ -26,7 +26,7 @@ class _MainPageState extends State<MainPage> {
 
   // Pages list
   final List<Widget> _pages = [
-    const HomePage(),
+    const DynamicHomePage(),
     const MarketplacePage(),
     const AlertsPage(),
     const ProfilePage(),

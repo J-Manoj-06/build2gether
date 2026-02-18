@@ -3,12 +3,7 @@
 /// Enum for different user roles in the platform
 library;
 
-enum UserRole {
-  farmer,
-  buyer,
-  seller,
-  renter,
-}
+enum UserRole { farmer, buyer, seller, renter }
 
 extension UserRoleExtension on UserRole {
   String get displayName {
