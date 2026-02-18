@@ -404,7 +404,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
           // Product Info
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.start,
@@ -415,25 +415,25 @@ class _MarketplacePageState extends State<MarketplacePage> {
                     product['name'] as String,
                     style: const TextStyle(
                       color: textDark,
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
 
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
 
                   // Rating
                   Row(
                     children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 14),
-                      const SizedBox(width: 4),
+                      const Icon(Icons.star, color: Colors.amber, size: 13),
+                      const SizedBox(width: 3),
                       Text(
                         product['rating'].toString(),
                         style: const TextStyle(
                           color: textGray,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -452,7 +452,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                           '₹${product['price']}',
                           style: const TextStyle(
                             color: primaryColor,
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -472,8 +472,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
                           );
                         },
                         child: Container(
-                          width: 32,
-                          height: 32,
+                          width: 30,
+                          height: 30,
                           decoration: BoxDecoration(
                             color: primaryColor,
                             borderRadius: BorderRadius.circular(8),
@@ -482,7 +482,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                             child: Icon(
                               Icons.add,
                               color: Colors.white,
-                              size: 18,
+                              size: 16,
                             ),
                           ),
                         ),
