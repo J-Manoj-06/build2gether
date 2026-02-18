@@ -28,6 +28,7 @@ class _AddProductPageState extends State<AddProductPage> {
   // State variables
   File? _selectedImage;
   String? _selectedCategory;
+  String? _selectedProductType;
   bool _loading = false;
 
   // Image picker instance
@@ -42,6 +43,14 @@ class _AddProductPageState extends State<AddProductPage> {
     'Fertilizers',
     'Tools',
     'Crops',
+    'Equipment',
+  ];
+
+  // Product Types (for role-based filtering)
+  final List<String> _productTypes = [
+    'Crop',
+    'Tool',
+    'Fertilizer',
     'Equipment',
   ];
 
@@ -141,6 +150,12 @@ class _AddProductPageState extends State<AddProductPage> {
       return;
     }
 
+    // Check if product type is selected
+    if (_selectedProductType == null) {
+      _showSnackBar('Please select a product type', isError: true);
+      return;
+    }
+
     setState(() {
       _loading = true;
     });
@@ -168,6 +183,8 @@ class _AddProductPageState extends State<AddProductPage> {
         'price': double.parse(_priceController.text.trim()),
         'quantity': int.parse(_quantityController.text.trim()),
         'category': _selectedCategory,
+        'productType': _selectedProductType!
+            .toLowerCase(), // crop, tool, fertilizer, equipment
         'imageUrl': imageUrl,
         'sellerId': userId,
         'createdAt': FieldValue.serverTimestamp(),
@@ -306,6 +323,11 @@ class _AddProductPageState extends State<AddProductPage> {
 
               // Category Dropdown
               _buildCategoryDropdown(),
+
+              const SizedBox(height: 16),
+
+              // Product Type Dropdown
+              _buildProductTypeDropdown(),
 
               const SizedBox(height: 32),
 
@@ -511,6 +533,48 @@ class _AddProductPageState extends State<AddProductPage> {
         validator: (value) {
           if (value == null || value.isEmpty) {
             return 'Please select a category';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+  Widget _buildProductTypeDropdown() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: DropdownButtonFormField<String>(
+        value: _selectedProductType,
+        decoration: InputDecoration(
+          labelText: 'Product Type',
+          prefixIcon: Icon(Icons.label, color: primaryColor),
+          border: InputBorder.none,
+          helperText: 'Used for role-based marketplace filtering',
+          helperStyle: TextStyle(fontSize: 11, color: Colors.grey[600]),
+        ),
+        hint: const Text('Select product type'),
+        items: _productTypes.map((type) {
+          return DropdownMenuItem(value: type, child: Text(type));
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedProductType = value;
+          });
+        },
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please select a product type';
           }
           return null;
         },

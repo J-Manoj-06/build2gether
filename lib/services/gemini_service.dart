@@ -13,7 +13,7 @@ class GeminiService {
 
   // Gemini API endpoint
   static const String apiEndpoint =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
   /// Send message to Gemini AI with conversation history
   ///

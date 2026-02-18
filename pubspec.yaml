@@ -53,6 +53,9 @@ dependencies:
   # Image picker
   image_picker: ^1.0.7
   
+  # Geolocation
+  geolocator: ^10.1.0
+  
   # UI utilities
   flutter_local_notifications: ^18.0.1
   cached_network_image: ^3.4.1

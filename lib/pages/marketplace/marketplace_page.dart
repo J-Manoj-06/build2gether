@@ -1,10 +1,14 @@
-/// Marketplace Page
+/// Marketplace Page - Role-Based with Location Sorting
 ///
-/// Agricultural products and equipment marketplace
+/// Intelligent marketplace that shows different products based on user roles
+/// and sorts by proximity
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../models/product_model.dart';
+import '../../services/user_service.dart';
 
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
@@ -14,80 +18,153 @@ class MarketplacePage extends StatefulWidget {
 }
 
 class _MarketplacePageState extends State<MarketplacePage> {
-  String _selectedCategory = 'All';
-  int _cartItemCount = 2;
+  // Services
+  final UserService _userService = UserService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Colors matching the HTML design
-  static const Color primaryColor = Color(0xFF2F7F33);
-  static const Color backgroundLight = Color(0xFFF6F8F6);
-  static const Color backgroundDark = Color(0xFF141E15);
-  static const Color accentLight = Color(0xFFE8F5E9);
-  static const Color textDark = Color(0xFF131613);
-  static const Color textGray = Color(0xFF6B806C);
+  // State variables
+  List<ProductModel> _products = [];
+  List<String> _roles = [];
+  double? _userLat;
+  double? _userLng;
+  String? _currentUserId;
+  bool _loading = true;
 
-  final List<String> _categories = [
-    'All',
-    'Seeds',
-    'Fertilizers',
-    'Tools',
-    'Equipment',
-  ];
-
-  // Sample products
-  final List<Map<String, dynamic>> _products = [
-    {
-      'name': 'Organic Fertilizer',
-      'price': 450,
-      'rating': 4.5,
-      'icon': Icons.yard_outlined,
-      'isFavorite': false,
-    },
-    {
-      'name': 'Power Tiller',
-      'price': 15000,
-      'rating': 4.8,
-      'icon': Icons.agriculture_outlined,
-      'isFavorite': false,
-    },
-    {
-      'name': 'Hybrid Seeds',
-      'price': 200,
-      'rating': 4.2,
-      'icon': Icons.eco_outlined,
-      'isFavorite': true,
-    },
-    {
-      'name': 'Garden Shovel',
-      'price': 350,
-      'rating': 4.7,
-      'icon': Icons.handyman_outlined,
-      'isFavorite': false,
-    },
-    {
-      'name': 'Irrigation Kit',
-      'price': 2400,
-      'rating': 4.9,
-      'icon': Icons.water_drop_outlined,
-      'isFavorite': false,
-    },
-    {
-      'name': 'Bio-pesticide',
-      'price': 850,
-      'rating': 4.4,
-      'icon': Icons.pest_control_outlined,
-      'isFavorite': false,
-    },
-  ];
+  // Colors
+  static const Color primaryColor = Color(0xFF2E7D32);
+  static const Color lightGreen = Color(0xFFE8F5E9);
+  static const Color backgroundLight = Color(0xFFF5F7F6);
 
   @override
   void initState() {
     super.initState();
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: primaryColor,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.white,
-        systemNavigationBarIconBrightness: Brightness.dark,
+    _loadMarketplace();
+  }
+
+  /// Load user profile and products
+  Future<void> _loadMarketplace() async {
+    setState(() {
+      _loading = true;
+    });
+
+    try {
+      // Step 1: Load user profile
+      final profile = await _userService.getUserProfile();
+      if (profile == null) {
+        _showError('Unable to load user profile');
+        return;
+      }
+
+      _roles = List<String>.from(profile['roles'] ?? []);
+      _userLat = profile['latitude'] as double?;
+      _userLng = profile['longitude'] as double?;
+      _currentUserId = _userService.getCurrentUserId();
+
+      // Step 2: Fetch products from Firestore
+      final querySnapshot = await _firestore.collection('products').get();
+
+      List<ProductModel> products = [];
+      for (var doc in querySnapshot.docs) {
+        try {
+          final product = ProductModel.fromFirestore(doc);
+          
+          // Calculate distance if both user and product have coordinates
+          if (_userLat != null && 
+              _userLng != null && 
+              product.latitude != null && 
+              product.longitude != null) {
+            final distanceInMeters = Geolocator.distanceBetween(
+              _userLat!,
+              _userLng!,
+              product.latitude!,
+              product.longitude!,
+            );
+            product.distance = distanceInMeters / 1000; // Convert to km
+          }
+
+          products.add(product);
+        } catch (e) {
+          print('Error parsing product ${doc.id}: $e');
+        }
+      }
+
+      // Step 3: Filter products by role
+      products = _filterProductsByRole(products);
+
+      // Step 4: Sort by distance (nearest first)
+      products.sort((a, b) {
+        if (a.distance == null && b.distance == null) return 0;
+        if (a.distance == null) return 1;
+        if (b.distance == null) return -1;
+        return a.distance!.compareTo(b.distance!);
+      });
+
+      setState(() {
+        _products = products;
+        _loading = false;
+      });
+    } catch (e) {
+      _showError('Error loading marketplace: $e');
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  /// Filter products based on user roles
+  List<ProductModel> _filterProductsByRole(List<ProductModel> products) {
+    if (_roles.isEmpty) {
+      return products; // Show all if no roles
+    }
+
+    Set<String> allowedTypes = {};
+
+    // Role-based filtering logic
+    for (String role in _roles) {
+      switch (role.toLowerCase()) {
+        case 'farmer':
+          // Farmers buy tools, fertilizers, equipment
+          allowedTypes.addAll(['tool', 'fertilizer', 'equipment']);
+          break;
+        case 'buyer':
+          // Buyers purchase crops
+          allowedTypes.add('crop');
+          break;
+        case 'seller':
+          // Sellers see all products
+          allowedTypes.addAll(['crop', 'tool', 'fertilizer', 'equipment']);
+          break;
+        case 'renter':
+          // Renters see equipment only
+          allowedTypes.add('equipment');
+          break;
+      }
+    }
+
+    // Filter products
+    return products.where((product) {
+      return allowedTypes.contains(product.productType.toLowerCase());
+    }).toList();
+  }
+
+  /// Get section title based on roles
+  String _getSectionTitle() {
+    if (_roles.isEmpty) return 'All Products';
+    
+    if (_roles.contains('buyer')) return 'Nearby Crops';
+    if (_roles.contains('farmer')) return 'Farming Supplies';
+    if (_roles.contains('renter')) return 'Equipment Near You';
+    if (_roles.contains('seller')) return 'Marketplace Listings';
+    
+    return 'Products Near You';
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
       ),
     );
   }
@@ -96,34 +173,123 @@ class _MarketplacePageState extends State<MarketplacePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundLight,
-      body: Column(
-        children: [
-          // Sticky Header
-          _buildHeader(),
-
-          // Main Content
-          Expanded(
-            child: SingleChildScrollView(
+      appBar: AppBar(
+        title: const Text(
+          'Marketplace',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: primaryColor,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _loadMarketplace,
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 24),
-
-                  // Search Bar
-                  _buildSearchBar(),
-
-                  const SizedBox(height: 24),
-
-                  // Horizontal Categories
-                  _buildCategoriesBar(),
-
-                  const SizedBox(height: 16),
-
-                  // Product Grid
-                  _buildProductGrid(),
-
-                  const SizedBox(height: 90),
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                  ),
+                  SizedBox(height: 16),
+                  Text('Loading products...'),
                 ],
               ),
+            )
+          : _products.isEmpty
+              ? _buildEmptyState()
+              : _buildProductList(),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No nearby items available for your role yet.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Check back later or expand your search area.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductList() {
+    return RefreshIndicator(
+      onRefresh: _loadMarketplace,
+      color: primaryColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _getSectionTitle(),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_products.length} items found',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Products grid
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.75,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: _products.length,
+              itemBuilder: (context, index) {
+                return _buildProductCard(_products[index]);
+              },
             ),
           ),
         ],
@@ -131,363 +297,132 @@ class _MarketplacePageState extends State<MarketplacePage> {
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      color: primaryColor,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Row(
-            children: [
-              // Menu Icon
-              const Icon(Icons.menu, color: Colors.white, size: 24),
+  Widget _buildProductCard(ProductModel product) {
+    final isOwnListing = product.ownerId == _currentUserId;
 
-              const SizedBox(width: 12),
-
-              // Title
-              const Expanded(
-                child: Text(
-                  'Uzhavu Sei AI',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ),
-
-              // Cart Icon with Badge
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.shopping_cart_outlined,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    onPressed: () {
-                      // Handle cart
-                    },
-                  ),
-                  if (_cartItemCount > 0)
-                    Positioned(
-                      right: 4,
-                      top: 4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '$_cartItemCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-
-              // Notifications Icon
-              IconButton(
-                icon: const Icon(
-                  Icons.notifications_outlined,
-                  color: Colors.white,
-                  size: 24,
-                ),
-                onPressed: () {
-                  // Handle notifications
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        height: 56,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: TextField(
-          decoration: InputDecoration(
-            hintText: 'Search tools, fertilizers...',
-            hintStyle: TextStyle(color: textGray.withOpacity(0.6)),
-            prefixIcon: Icon(Icons.search, color: textGray),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(
-                color: primaryColor.withOpacity(0.2),
-                width: 2,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoriesBar() {
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _categories.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final category = _categories[index];
-          final isSelected = _selectedCategory == category;
-
-          return InkWell(
-            onTap: () {
-              setState(() {
-                _selectedCategory = category;
-              });
-            },
-            borderRadius: BorderRadius.circular(100),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected ? primaryColor : accentLight,
-                borderRadius: BorderRadius.circular(100),
-              ),
-              child: Center(
-                child: Text(
-                  category,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : primaryColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildProductGrid() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childAspectRatio: 0.75,
-        ),
-        itemCount: _products.length,
-        itemBuilder: (context, index) {
-          return _buildProductCard(_products[index], index);
-        },
-      ),
-    );
-  }
-
-  Widget _buildProductCard(Map<String, dynamic> product, int index) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.06),
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Product Image Container
+          // Product image
           Stack(
             children: [
-              Container(
-                height: 140,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: accentLight,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(14),
                 ),
-                child: Center(
-                  child: Icon(
-                    product['icon'] as IconData,
-                    size: 45,
-                    color: primaryColor.withOpacity(0.4),
-                  ),
-                ),
+                child: product.imageUrls.isNotEmpty
+                    ? Image.network(
+                        product.imageUrls.first,
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildPlaceholderImage();
+                        },
+                      )
+                    : _buildPlaceholderImage(),
               ),
 
-              // Favorite Button
-              Positioned(
-                top: 8,
-                right: 8,
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      _products[index]['isFavorite'] =
-                          !(_products[index]['isFavorite'] as bool);
-                    });
-                  },
+              // "My Listing" badge for sellers
+              if (isOwnListing)
+                Positioned(
+                  top: 8,
+                  right: 8,
                   child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.8),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                        ),
-                      ],
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
-                    child: Center(
-                      child: Icon(
-                        product['isFavorite'] as bool
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: primaryColor,
-                        size: 18,
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'My Listing',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
 
-          // Product Info
+          // Product details
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Product Name
+                  // Product name
                   Text(
-                    product['name'] as String,
+                    product.name,
                     style: const TextStyle(
-                      color: textDark,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
 
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
 
-                  // Rating
-                  Row(
-                    children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 13),
-                      const SizedBox(width: 3),
-                      Text(
-                        product['rating'].toString(),
-                        style: const TextStyle(
-                          color: textGray,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                  // Distance
+                  if (product.distance != null)
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: 14,
+                          color: Colors.grey[600],
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${product.distance!.toStringAsFixed(1)} km away',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
 
                   const Spacer(),
 
-                  // Price and Add Button
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          '₹${product['price']}',
-                          style: const TextStyle(
-                            color: primaryColor,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                  // Price
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: lightGreen,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '₹${product.price.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
                       ),
-                      InkWell(
-                        onTap: () {
-                          // Handle add to cart
-                          setState(() {
-                            _cartItemCount++;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${product['name']} added to cart'),
-                              duration: const Duration(seconds: 1),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: primaryColor,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -498,38 +433,15 @@ class _MarketplacePageState extends State<MarketplacePage> {
     );
   }
 
-  Widget _buildFAB() {
+  Widget _buildPlaceholderImage() {
     return Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        color: primaryColor,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(color: Colors.white, width: 4),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            // Handle add product
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Add new product'),
-                duration: Duration(seconds: 1),
-              ),
-            );
-          },
-          borderRadius: BorderRadius.circular(100),
-          child: const Center(
-            child: Icon(Icons.add, color: Colors.white, size: 30),
-          ),
+      height: 120,
+      color: lightGreen,
+      child: const Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 48,
+          color: primaryColor,
         ),
       ),
     );

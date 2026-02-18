@@ -10,6 +10,7 @@ class ProductModel {
   final String name;
   final String description;
   final String category; // 'equipment', 'seeds', 'tools', 'fertilizer'
+  final String productType; // 'crop', 'tool', 'fertilizer', 'equipment'
   final double price;
   final String priceType; // 'per_day', 'per_hour', 'fixed'
   final String ownerId;
@@ -22,12 +23,14 @@ class ProductModel {
   final int stockQuantity;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  double? distance; // Calculated distance from user (in km)
 
   ProductModel({
     required this.id,
     required this.name,
     required this.description,
     required this.category,
+    required this.productType,
     required this.price,
     required this.priceType,
     required this.ownerId,
@@ -40,6 +43,7 @@ class ProductModel {
     this.stockQuantity = 1,
     required this.createdAt,
     this.updatedAt,
+    this.distance,
   });
 
   /// Creates ProductModel from Firestore document
@@ -50,6 +54,7 @@ class ProductModel {
       name: data['name'] ?? '',
       description: data['description'] ?? '',
       category: data['category'] ?? '',
+      productType: data['productType'] ?? 'crop', // Default to crop if not set
       price: (data['price'] ?? 0).toDouble(),
       priceType: data['priceType'] ?? 'fixed',
       ownerId: data['ownerId'] ?? '',
@@ -71,6 +76,7 @@ class ProductModel {
       'name': name,
       'description': description,
       'category': category,
+      'productType': productType,
       'price': price,
       'priceType': priceType,
       'ownerId': ownerId,
@@ -92,6 +98,7 @@ class ProductModel {
     String? name,
     String? description,
     String? category,
+    String? productType,
     double? price,
     String? priceType,
     String? ownerId,
@@ -104,12 +111,14 @@ class ProductModel {
     int? stockQuantity,
     DateTime? createdAt,
     DateTime? updatedAt,
+    double? distance,
   }) {
     return ProductModel(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
       category: category ?? this.category,
+      productType: productType ?? this.productType,
       price: price ?? this.price,
       priceType: priceType ?? this.priceType,
       ownerId: ownerId ?? this.ownerId,
@@ -122,6 +131,7 @@ class ProductModel {
       stockQuantity: stockQuantity ?? this.stockQuantity,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      distance: distance ?? this.distance,
     );
   }
 
