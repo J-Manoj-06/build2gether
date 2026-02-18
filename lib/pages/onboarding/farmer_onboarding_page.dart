@@ -4,10 +4,10 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import '../main/main_page.dart';
 
 class FarmerOnboardingPage extends StatefulWidget {
@@ -34,6 +34,7 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
 
   String _selectedExperience = 'Beginner';
   bool _isLoading = false;
+  bool _fetchingLocation = false;
 
   final List<String> _roles = ['Farmer', 'Buyer', 'Seller', 'Renter'];
 
@@ -56,6 +57,90 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
     _cropController.dispose();
     _landSizeController.dispose();
     super.dispose();
+  }
+
+  /// Get current GPS location and reverse geocode to location name
+  Future<void> _getCurrentLocation() async {
+    setState(() => _fetchingLocation = true);
+
+    try {
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Location permission denied. Please enter location manually.',
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        setState(() => _fetchingLocation = false);
+        return;
+      }
+
+      // Get current position
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Reverse geocode to get location name
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        String locationName = '';
+
+        if (place.locality != null && place.locality!.isNotEmpty) {
+          locationName = place.locality!;
+        }
+        if (place.administrativeArea != null &&
+            place.administrativeArea!.isNotEmpty) {
+          if (locationName.isNotEmpty) {
+            locationName += ', ${place.administrativeArea}';
+          } else {
+            locationName = place.administrativeArea!;
+          }
+        }
+
+        setState(() {
+          _locationController.text = locationName;
+          _fetchingLocation = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Location detected: $locationName'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error getting location: $e');
+      setState(() => _fetchingLocation = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to get location: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _saveFarmerProfile() async {
@@ -248,18 +333,76 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
 
                   const SizedBox(height: 16),
 
-                  // Location Field
-                  _buildInputField(
-                    controller: _locationController,
-                    label: 'Farm Location',
-                    icon: Icons.location_on_outlined,
-                    hint: 'City, State',
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your location';
-                      }
-                      return null;
-                    },
+                  // Location Field with GPS button
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildInputField(
+                              controller: _locationController,
+                              label: 'Farm Location',
+                              icon: Icons.location_on_outlined,
+                              hint: 'City, State',
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter your location';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // GPS Button
+                          Container(
+                            height: 56,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _fetchingLocation
+                                    ? null
+                                    : _getCurrentLocation,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  child: _fetchingLocation
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.my_location,
+                                          color: Colors.white,
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: Text(
+                          'Tap 📍 to use GPS location',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 16),

@@ -169,26 +169,45 @@ class _AddProductPageState extends State<AddProductPage> {
         throw Exception('Failed to upload image to Cloudinary');
       }
 
-      // Step 2: Get current user ID
+      // Step 2: Get current user ID and user details
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) {
         throw Exception('User not logged in');
       }
 
+      // Get user details
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      final userData = userDoc.data() ?? {};
+      final userName = userData['name'] ?? 'Unknown User';
+      final userLat = userData['latitude'] as double?;
+      final userLng = userData['longitude'] as double?;
+      final userLocation = userData['location'] as String?;
+
       // Step 3: Create product document
       _showSnackBar('Saving product...');
+      print('DEBUG: Adding product with imageUrl: $imageUrl');
       await FirebaseFirestore.instance.collection('products').add({
-        'productName': _nameController.text.trim(),
+        'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
         'price': double.parse(_priceController.text.trim()),
-        'quantity': int.parse(_quantityController.text.trim()),
+        'stockQuantity': int.parse(_quantityController.text.trim()),
         'category': _selectedCategory,
         'productType': _selectedProductType!
             .toLowerCase(), // crop, tool, fertilizer, equipment
-        'imageUrl': imageUrl,
-        'sellerId': userId,
+        'imageUrls': [imageUrl], // Array of image URLs
+        'ownerId': userId,
+        'ownerName': userName,
+        'priceType': 'fixed',
+        'location': userLocation,
+        'latitude': userLat,
+        'longitude': userLng,
+        'isAvailable': true,
         'createdAt': FieldValue.serverTimestamp(),
       });
+      print('DEBUG: Product added successfully with correct field names');
 
       // Success!
       _showSnackBar('✅ Product added successfully!');
@@ -515,7 +534,7 @@ class _AddProductPageState extends State<AddProductPage> {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: DropdownButtonFormField<String>(
-        value: _selectedCategory,
+        initialValue: _selectedCategory,
         decoration: InputDecoration(
           labelText: 'Category',
           prefixIcon: Icon(Icons.category, color: primaryColor),
@@ -555,7 +574,7 @@ class _AddProductPageState extends State<AddProductPage> {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: DropdownButtonFormField<String>(
-        value: _selectedProductType,
+        initialValue: _selectedProductType,
         decoration: InputDecoration(
           labelText: 'Product Type',
           prefixIcon: Icon(Icons.label, color: primaryColor),

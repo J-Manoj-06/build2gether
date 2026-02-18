@@ -49,22 +49,40 @@ class ProductModel {
   /// Creates ProductModel from Firestore document
   factory ProductModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+
+    // Handle both old and new field names for backward compatibility
+    final name = data['name'] ?? data['productName'] ?? 'Unnamed Product';
+    final ownerId = data['ownerId'] ?? data['sellerId'] ?? '';
+    final stockQuantity = data['stockQuantity'] ?? data['quantity'] ?? 1;
+
+    // Handle both single imageUrl and imageUrls array
+    List<String> imageUrls = [];
+    if (data['imageUrls'] != null && data['imageUrls'] is List) {
+      imageUrls = List<String>.from(data['imageUrls']);
+    } else if (data['imageUrl'] != null && data['imageUrl'] is String) {
+      imageUrls = [data['imageUrl'] as String];
+    }
+
+    print(
+      'DEBUG ProductModel.fromFirestore: id=${doc.id}, name=$name, imageUrls=$imageUrls, price=${data['price']}',
+    );
+
     return ProductModel(
       id: doc.id,
-      name: data['name'] ?? '',
+      name: name,
       description: data['description'] ?? '',
       category: data['category'] ?? '',
       productType: data['productType'] ?? 'crop', // Default to crop if not set
       price: (data['price'] ?? 0).toDouble(),
       priceType: data['priceType'] ?? 'fixed',
-      ownerId: data['ownerId'] ?? '',
-      ownerName: data['ownerName'] ?? '',
-      imageUrls: List<String>.from(data['imageUrls'] ?? []),
+      ownerId: ownerId,
+      ownerName: data['ownerName'] ?? 'Unknown',
+      imageUrls: imageUrls,
       location: data['location'],
       latitude: data['latitude']?.toDouble(),
       longitude: data['longitude']?.toDouble(),
       isAvailable: data['isAvailable'] ?? true,
-      stockQuantity: data['stockQuantity'] ?? 1,
+      stockQuantity: stockQuantity,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );

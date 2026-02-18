@@ -74,12 +74,29 @@ class _MarketplacePageState extends State<MarketplacePage> {
       _loadAIRecommendations();
 
       // Step 2: Fetch products from Firestore
+      print('DEBUG Marketplace: Fetching products from Firestore...');
       final querySnapshot = await _firestore.collection('products').get();
+      print(
+        'DEBUG Marketplace: Found ${querySnapshot.docs.length} products in database',
+      );
 
       List<ProductModel> products = [];
       for (var doc in querySnapshot.docs) {
         try {
+          print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          print('DEBUG: Processing product document ${doc.id}');
+          print('DEBUG: Raw data: ${doc.data()}');
           final product = ProductModel.fromFirestore(doc);
+          print('DEBUG: ✅ Parsed product successfully:');
+          print('  - Name: ${product.name}');
+          print('  - Price: ₹${product.price}');
+          print('  - Category: ${product.category}');
+          print('  - ProductType: ${product.productType}');
+          print('  - Images: ${product.imageUrls.length} image(s)');
+          if (product.imageUrls.isNotEmpty) {
+            print('  - First Image URL: ${product.imageUrls.first}');
+          }
+          print('  - Owner: ${product.ownerName} (${product.ownerId})');
 
           // Calculate distance if both user and product have coordinates
           if (_userLat != null &&
@@ -93,16 +110,29 @@ class _MarketplacePageState extends State<MarketplacePage> {
               product.longitude!,
             );
             product.distance = distanceInMeters / 1000; // Convert to km
+            print('  - Distance: ${product.distance!.toStringAsFixed(2)} km');
+          } else {
+            print('  - Distance: Not available (missing coordinates)');
           }
+          print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
           products.add(product);
-        } catch (e) {
-          print('Error parsing product ${doc.id}: $e');
+        } catch (e, stackTrace) {
+          print('❌ Error parsing product ${doc.id}: $e');
+          print('Stack trace: $stackTrace');
         }
       }
 
       // Step 3: Filter products by role
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print(
+        'DEBUG Marketplace: Total products before filtering: ${products.length}',
+      );
+      print('DEBUG Marketplace: User roles: $_roles');
       products = _filterProductsByRole(products);
+      print(
+        'DEBUG Marketplace: Total products after filtering: ${products.length}',
+      );
 
       // Step 4: Sort by distance (nearest first)
       products.sort((a, b) {
@@ -111,12 +141,16 @@ class _MarketplacePageState extends State<MarketplacePage> {
         if (b.distance == null) return -1;
         return a.distance!.compareTo(b.distance!);
       });
+      print('DEBUG Marketplace: Products sorted by distance');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       setState(() {
         _products = products;
         _loading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ Error loading marketplace: $e');
+      print('Stack trace: $stackTrace');
       _showError('Error loading marketplace: $e');
       setState(() {
         _loading = false;
@@ -359,7 +393,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 0.75,
+                childAspectRatio: 0.72,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
               ),
@@ -451,6 +485,11 @@ class _MarketplacePageState extends State<MarketplacePage> {
   Widget _buildRecommendedProductCard(ProductModel product) {
     final isMyListing = product.ownerId == _currentUserId;
 
+    // Debug logging
+    print(
+      '🌟 Rendering recommended product: ${product.name} with ${product.imageUrls.length} images',
+    );
+
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -468,7 +507,26 @@ class _MarketplacePageState extends State<MarketplacePage> {
                       product.imageUrls.first,
                       fit: BoxFit.cover,
                       width: double.infinity,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          height: 100,
+                          color: lightGreen,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                  : null,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                primaryColor,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                       errorBuilder: (context, error, stackTrace) {
+                        print('❌ Error loading recommended image: $error');
                         return const Center(
                           child: Icon(Icons.image_not_supported, size: 40),
                         );
@@ -566,6 +624,15 @@ class _MarketplacePageState extends State<MarketplacePage> {
   Widget _buildProductCard(ProductModel product) {
     final isOwnListing = product.ownerId == _currentUserId;
 
+    // Debug logging for image display
+    if (product.imageUrls.isEmpty) {
+      print('⚠️ Product ${product.name} has no images');
+    } else {
+      print(
+        '📸 Product ${product.name} has ${product.imageUrls.length} image(s): ${product.imageUrls.first}',
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -594,7 +661,29 @@ class _MarketplacePageState extends State<MarketplacePage> {
                         height: 120,
                         width: double.infinity,
                         fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            height: 120,
+                            color: lightGreen,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value:
+                                    loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                    : null,
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                  primaryColor,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                         errorBuilder: (context, error, stackTrace) {
+                          print(
+                            '❌ Error loading image for ${product.name}: $error',
+                          );
                           return _buildPlaceholderImage();
                         },
                       )
@@ -629,69 +718,71 @@ class _MarketplacePageState extends State<MarketplacePage> {
           ),
 
           // Product details
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Product name
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Product name
+                Text(
+                  product.name,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
 
-                  const SizedBox(height: 4),
+                const SizedBox(height: 6),
 
-                  // Distance
-                  if (product.distance != null)
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 14,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${product.distance!.toStringAsFixed(1)} km away',
+                // Distance
+                if (product.distance != null)
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        size: 12,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          '${product.distance!.toStringAsFixed(1)} km',
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey[600],
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                    ),
-
-                  const Spacer(),
-
-                  // Price
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: lightGreen,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '₹${product.price.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
                       ),
+                    ],
+                  ),
+
+                const SizedBox(height: 8),
+
+                // Price
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: lightGreen,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '₹${product.price.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

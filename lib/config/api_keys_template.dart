@@ -5,6 +5,7 @@
 ///
 /// Get your Gemini API key from: https://aistudio.google.com/app/apikey
 /// Get Cloudinary credentials from: https://cloudinary.com/console
+library;
 
 class ApiKeys {
   // 🔐 Gemini AI API Key
