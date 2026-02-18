@@ -10,6 +10,7 @@ import '../../models/user_role.dart';
 import '../ai/find_buyers_page.dart';
 import '../chat/ai_chat_page.dart';
 import '../marketplace/add_product_page.dart';
+import '../rent/farmer_rent_page.dart';
 
 class DynamicHomePage extends StatefulWidget {
   const DynamicHomePage({super.key});
@@ -412,7 +413,12 @@ class _DynamicHomePageState extends State<DynamicHomePage> {
           gradient: const LinearGradient(
             colors: [Color(0xFF6A1B9A), Color(0xFF4A148C)],
           ),
-          onTap: () {},
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const FarmerRentPage()),
+            );
+          },
         ),
 
         const SizedBox(height: 12),
