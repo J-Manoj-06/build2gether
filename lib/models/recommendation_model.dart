@@ -1,5 +1,5 @@
 /// AI Recommendation model
-/// 
+///
 /// Represents AI-generated recommendations for farmers.
 library;
 
@@ -14,7 +14,7 @@ class RecommendationModel {
   final double confidenceScore; // 0.0 to 1.0
   final Map<String, dynamic> metadata; // Additional context
   final DateTime createdAt;
-  
+
   RecommendationModel({
     required this.id,
     required this.userId,
@@ -25,7 +25,7 @@ class RecommendationModel {
     required this.metadata,
     required this.createdAt,
   });
-  
+
   /// Creates RecommendationModel from Firestore document
   factory RecommendationModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -40,7 +40,7 @@ class RecommendationModel {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
-  
+
   /// Creates RecommendationModel from JSON (for API responses)
   factory RecommendationModel.fromJson(Map<String, dynamic> json) {
     return RecommendationModel(
@@ -51,12 +51,12 @@ class RecommendationModel {
       type: json['type'] ?? 'product',
       confidenceScore: (json['confidenceScore'] ?? 0.0).toDouble(),
       metadata: Map<String, dynamic>.from(json['metadata'] ?? {}),
-      createdAt: json['createdAt'] != null 
+      createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
     );
   }
-  
+
   /// Converts RecommendationModel to Firestore document
   Map<String, dynamic> toFirestore() {
     return {
@@ -69,7 +69,7 @@ class RecommendationModel {
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
-  
+
   /// Converts to JSON
   Map<String, dynamic> toJson() {
     return {
@@ -83,7 +83,7 @@ class RecommendationModel {
       'createdAt': createdAt.toIso8601String(),
     };
   }
-  
+
   @override
   String toString() {
     return 'RecommendationModel(id: $id, title: $title, type: $type, confidence: $confidenceScore)';

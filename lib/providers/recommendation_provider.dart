@@ -1,5 +1,5 @@
 /// Recommendation Provider
-/// 
+///
 /// Manages AI recommendation state using Provider pattern.
 library;
 
@@ -9,17 +9,17 @@ import '../services/ai_recommendation_service.dart';
 
 class RecommendationProvider with ChangeNotifier {
   final AIRecommendationService _aiService = AIRecommendationService();
-  
+
   List<RecommendationModel> _recommendations = [];
   bool _isLoading = false;
   String? _errorMessage;
-  
+
   // Getters
   List<RecommendationModel> get recommendations => _recommendations;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasRecommendations => _recommendations.isNotEmpty;
-  
+
   /// Load recommendations for user
   Future<void> loadRecommendations({
     required String userId,
@@ -28,7 +28,7 @@ class RecommendationProvider with ChangeNotifier {
   }) async {
     _setLoading(true);
     _errorMessage = null;
-    
+
     try {
       _recommendations = await _aiService.getRecommendations(
         userId: userId,
@@ -41,7 +41,7 @@ class RecommendationProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
-  
+
   /// Load equipment recommendations
   Future<void> loadEquipmentRecommendations(
     String userId,
@@ -50,7 +50,7 @@ class RecommendationProvider with ChangeNotifier {
   ) async {
     _setLoading(true);
     _errorMessage = null;
-    
+
     try {
       _recommendations = await _aiService.getEquipmentRecommendations(
         userId,
@@ -63,7 +63,7 @@ class RecommendationProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
-  
+
   /// Load crop recommendations
   Future<void> loadCropRecommendations(
     String userId,
@@ -72,7 +72,7 @@ class RecommendationProvider with ChangeNotifier {
   ) async {
     _setLoading(true);
     _errorMessage = null;
-    
+
     try {
       _recommendations = await _aiService.getCropRecommendations(
         userId,
@@ -85,7 +85,7 @@ class RecommendationProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
-  
+
   /// Load product recommendations
   Future<void> loadProductRecommendations(
     String userId,
@@ -93,7 +93,7 @@ class RecommendationProvider with ChangeNotifier {
   ) async {
     _setLoading(true);
     _errorMessage = null;
-    
+
     try {
       _recommendations = await _aiService.getProductRecommendations(
         userId,
@@ -105,13 +105,13 @@ class RecommendationProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
-  
+
   /// Load mock recommendations for testing
   /// TODO: Remove in production
   Future<void> loadMockRecommendations(String userId) async {
     _setLoading(true);
     _errorMessage = null;
-    
+
     try {
       _recommendations = await _aiService.getMockRecommendations(userId);
       _setLoading(false);
@@ -120,34 +120,32 @@ class RecommendationProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
-  
+
   /// Filter recommendations by type
   List<RecommendationModel> getRecommendationsByType(String type) {
-    return _recommendations
-        .where((rec) => rec.type == type)
-        .toList();
+    return _recommendations.where((rec) => rec.type == type).toList();
   }
-  
+
   /// Get top recommendations by confidence score
   List<RecommendationModel> getTopRecommendations(int count) {
     final sorted = List<RecommendationModel>.from(_recommendations)
       ..sort((a, b) => b.confidenceScore.compareTo(a.confidenceScore));
-    
+
     return sorted.take(count).toList();
   }
-  
+
   /// Clear recommendations
   void clearRecommendations() {
     _recommendations = [];
     notifyListeners();
   }
-  
+
   /// Clear error message
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
-  
+
   /// Retry loading last request
   /// TODO: Store last request parameters to enable retry
   Future<void> retry() async {
@@ -155,7 +153,7 @@ class RecommendationProvider with ChangeNotifier {
     clearError();
     notifyListeners();
   }
-  
+
   /// Set loading state
   void _setLoading(bool value) {
     _isLoading = value;

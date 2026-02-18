@@ -1,5 +1,5 @@
 /// Input Field Widget
-/// 
+///
 /// Reusable text input field with consistent styling and validation.
 library;
 
@@ -22,7 +22,7 @@ class InputField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final Function(String)? onChanged;
   final Function(String)? onSubmitted;
-  
+
   const InputField({
     super.key,
     required this.controller,
@@ -41,7 +41,7 @@ class InputField extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -69,10 +69,7 @@ class InputField extends StatelessWidget {
           onFieldSubmitted: onSubmitted,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 14,
-            ),
+            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
             prefixIcon: prefixIcon != null
                 ? Icon(prefixIcon, color: AppTheme.deepGreen)
                 : null,

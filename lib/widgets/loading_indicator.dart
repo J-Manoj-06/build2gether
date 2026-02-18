@@ -1,5 +1,5 @@
 /// Loading Indicator Widget
-/// 
+///
 /// Reusable loading indicator with optional message.
 library;
 
@@ -10,14 +10,9 @@ class LoadingIndicator extends StatelessWidget {
   final String? message;
   final double size;
   final Color? color;
-  
-  const LoadingIndicator({
-    super.key,
-    this.message,
-    this.size = 40,
-    this.color,
-  });
-  
+
+  const LoadingIndicator({super.key, this.message, this.size = 40, this.color});
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -56,14 +51,14 @@ class LoadingOverlay extends StatelessWidget {
   final bool isLoading;
   final Widget child;
   final String? message;
-  
+
   const LoadingOverlay({
     super.key,
     required this.isLoading,
     required this.child,
     this.message,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return Stack(

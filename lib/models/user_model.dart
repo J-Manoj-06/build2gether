@@ -1,5 +1,5 @@
 /// User model for Uzhavu Sei AI
-/// 
+///
 /// Represents a user in the application (Farmer, Buyer, or Admin).
 library;
 
@@ -17,7 +17,7 @@ class UserModel {
   final double? longitude;
   final DateTime createdAt;
   final DateTime? updatedAt;
-  
+
   UserModel({
     required this.uid,
     required this.email,
@@ -31,7 +31,7 @@ class UserModel {
     required this.createdAt,
     this.updatedAt,
   });
-  
+
   /// Creates UserModel from Firestore document
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -49,7 +49,7 @@ class UserModel {
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
   }
-  
+
   /// Converts UserModel to Firestore document
   Map<String, dynamic> toFirestore() {
     return {
@@ -65,7 +65,7 @@ class UserModel {
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
     };
   }
-  
+
   /// Creates a copy with updated fields
   UserModel copyWith({
     String? uid,
@@ -94,7 +94,7 @@ class UserModel {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
-  
+
   @override
   String toString() {
     return 'UserModel(uid: $uid, name: $name, email: $email, role: $role)';

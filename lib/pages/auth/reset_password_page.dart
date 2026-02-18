@@ -1,5 +1,5 @@
 /// Reset Password Page
-/// 
+///
 /// Allows users to reset their password via email.
 library;
 
@@ -21,24 +21,24 @@ class ResetPasswordPage extends StatefulWidget {
 class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
+
   @override
   void dispose() {
     _emailController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _handleResetPassword() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final success = await authProvider.sendPasswordResetEmail(
       _emailController.text.trim(),
     );
-    
+
     if (!mounted) return;
-    
+
     if (success) {
       AppUtils.showSuccessSnackbar(
         context,
@@ -52,7 +52,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       );
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

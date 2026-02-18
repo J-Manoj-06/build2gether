@@ -1,5 +1,5 @@
 /// Main App Widget
-/// 
+///
 /// Configures MaterialApp with theme, routes, and providers.
 library;
 
@@ -16,6 +16,7 @@ import 'pages/auth/farmer_login_page.dart';
 import 'pages/auth/register_page.dart';
 import 'pages/auth/reset_password_page.dart';
 import 'pages/home/home_page.dart';
+import 'pages/marketplace/marketplace_page.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -39,6 +40,7 @@ class MyApp extends StatelessWidget {
           AppRoutes.register: (context) => const RegisterPage(),
           AppRoutes.resetPassword: (context) => const ResetPasswordPage(),
           AppRoutes.home: (context) => const HomePage(),
+          AppRoutes.marketplace: (context) => const MarketplacePage(),
         },
       ),
     );

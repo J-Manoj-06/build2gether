@@ -1,5 +1,5 @@
 /// Splash Screen
-/// 
+///
 /// Initial loading screen that checks auth state and navigates accordingly.
 library;
 
@@ -30,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    
+
     // Set system UI overlay style for splash
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(

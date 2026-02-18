@@ -1,5 +1,5 @@
 /// Farmer Register Page
-/// 
+///
 /// Registration screen for new farmers with email/password and Google sign-in
 library;
 
@@ -21,7 +21,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -90,10 +91,7 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -116,10 +114,7 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -226,9 +221,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         decoration: InputDecoration(
                           hintText: 'Full Name',
-                          hintStyle: const TextStyle(
-                            color: Colors.grey,
-                          ),
+                          hintStyle: const TextStyle(color: Colors.grey),
                           prefixIcon: Icon(
                             Icons.person_outline,
                             color: primaryDark.withOpacity(0.6),
@@ -300,9 +293,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         decoration: InputDecoration(
                           hintText: 'Email Address',
-                          hintStyle: const TextStyle(
-                            color: Colors.grey,
-                          ),
+                          hintStyle: const TextStyle(color: Colors.grey),
                           prefixIcon: Icon(
                             Icons.mail_outline,
                             color: primaryDark.withOpacity(0.6),
@@ -374,9 +365,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         decoration: InputDecoration(
                           hintText: 'Password',
-                          hintStyle: const TextStyle(
-                            color: Colors.grey,
-                          ),
+                          hintStyle: const TextStyle(color: Colors.grey),
                           prefixIcon: Icon(
                             Icons.lock_outline,
                             color: primaryDark.withOpacity(0.6),
@@ -462,9 +451,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         decoration: InputDecoration(
                           hintText: 'Confirm Password',
-                          hintStyle: const TextStyle(
-                            color: Colors.grey,
-                          ),
+                          hintStyle: const TextStyle(color: Colors.grey),
                           prefixIcon: Icon(
                             Icons.lock_reset,
                             color: primaryDark.withOpacity(0.6),
@@ -479,7 +466,8 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                             onPressed: () {
                               setState(() {
-                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                                _obscureConfirmPassword =
+                                    !_obscureConfirmPassword;
                               });
                             },
                           ),

@@ -1,5 +1,5 @@
 /// Product Provider
-/// 
+///
 /// Manages product state and operations using Provider pattern.
 library;
 
@@ -9,58 +9,63 @@ import '../services/firestore_service.dart';
 
 class ProductProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
-  
+
   List<ProductModel> _products = [];
   List<ProductModel> _filteredProducts = [];
   ProductModel? _selectedProduct;
   bool _isLoading = false;
   String? _errorMessage;
   String? _selectedCategory;
-  
+
   // Getters
-  List<ProductModel> get products => _filteredProducts.isEmpty && _selectedCategory == null
+  List<ProductModel> get products =>
+      _filteredProducts.isEmpty && _selectedCategory == null
       ? _products
       : _filteredProducts;
   ProductModel? get selectedProduct => _selectedProduct;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get selectedCategory => _selectedCategory;
-  
+
   /// Load all products
   void loadProducts({String? category}) {
     _selectedCategory = category;
     _setLoading(true);
-    
-    _firestoreService.getProducts(category: category).listen(
-      (productList) {
-        _products = productList;
-        _filteredProducts = productList;
-        _setLoading(false);
-      },
-      onError: (error) {
-        _errorMessage = error.toString();
-        _setLoading(false);
-      },
-    );
+
+    _firestoreService
+        .getProducts(category: category)
+        .listen(
+          (productList) {
+            _products = productList;
+            _filteredProducts = productList;
+            _setLoading(false);
+          },
+          onError: (error) {
+            _errorMessage = error.toString();
+            _setLoading(false);
+          },
+        );
   }
-  
+
   /// Load products by owner
   void loadProductsByOwner(String ownerId) {
     _setLoading(true);
-    
-    _firestoreService.getProducts(ownerId: ownerId).listen(
-      (productList) {
-        _products = productList;
-        _filteredProducts = productList;
-        _setLoading(false);
-      },
-      onError: (error) {
-        _errorMessage = error.toString();
-        _setLoading(false);
-      },
-    );
+
+    _firestoreService
+        .getProducts(ownerId: ownerId)
+        .listen(
+          (productList) {
+            _products = productList;
+            _filteredProducts = productList;
+            _setLoading(false);
+          },
+          onError: (error) {
+            _errorMessage = error.toString();
+            _setLoading(false);
+          },
+        );
   }
-  
+
   /// Search products
   Future<void> searchProducts(String searchTerm) async {
     if (searchTerm.isEmpty) {
@@ -68,9 +73,9 @@ class ProductProvider with ChangeNotifier {
       notifyListeners();
       return;
     }
-    
+
     _setLoading(true);
-    
+
     try {
       final results = await _firestoreService.searchProducts(searchTerm);
       _filteredProducts = results;
@@ -80,11 +85,11 @@ class ProductProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
-  
+
   /// Filter products by category
   void filterByCategory(String? category) {
     _selectedCategory = category;
-    
+
     if (category == null) {
       _filteredProducts = _products;
     } else {
@@ -92,23 +97,23 @@ class ProductProvider with ChangeNotifier {
           .where((product) => product.category == category)
           .toList();
     }
-    
+
     notifyListeners();
   }
-  
+
   /// Filter products by availability
   void filterByAvailability(bool isAvailable) {
     _filteredProducts = _products
         .where((product) => product.isAvailable == isAvailable)
         .toList();
-    
+
     notifyListeners();
   }
-  
+
   /// Get product by ID
   Future<void> getProduct(String productId) async {
     _setLoading(true);
-    
+
     try {
       _selectedProduct = await _firestoreService.getProduct(productId);
       _setLoading(false);
@@ -117,12 +122,12 @@ class ProductProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
-  
+
   /// Create new product
   Future<bool> createProduct(ProductModel product) async {
     _setLoading(true);
     _errorMessage = null;
-    
+
     try {
       await _firestoreService.createProduct(product);
       _setLoading(false);
@@ -133,12 +138,15 @@ class ProductProvider with ChangeNotifier {
       return false;
     }
   }
-  
+
   /// Update product
-  Future<bool> updateProduct(String productId, Map<String, dynamic> data) async {
+  Future<bool> updateProduct(
+    String productId,
+    Map<String, dynamic> data,
+  ) async {
     _setLoading(true);
     _errorMessage = null;
-    
+
     try {
       await _firestoreService.updateProduct(productId, data);
       _setLoading(false);
@@ -149,12 +157,12 @@ class ProductProvider with ChangeNotifier {
       return false;
     }
   }
-  
+
   /// Delete product
   Future<bool> deleteProduct(String productId) async {
     _setLoading(true);
     _errorMessage = null;
-    
+
     try {
       await _firestoreService.deleteProduct(productId);
       _setLoading(false);
@@ -165,26 +173,26 @@ class ProductProvider with ChangeNotifier {
       return false;
     }
   }
-  
+
   /// Clear selected product
   void clearSelectedProduct() {
     _selectedProduct = null;
     notifyListeners();
   }
-  
+
   /// Clear filters
   void clearFilters() {
     _selectedCategory = null;
     _filteredProducts = _products;
     notifyListeners();
   }
-  
+
   /// Clear error message
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
-  
+
   /// Set loading state
   void _setLoading(bool value) {
     _isLoading = value;

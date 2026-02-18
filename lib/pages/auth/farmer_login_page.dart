@@ -1,5 +1,5 @@
 /// Farmer Login Page
-/// 
+///
 /// Login screen for farmers with email/password and Google sign-in
 library;
 
@@ -71,10 +71,7 @@ class _FarmerLoginPageState extends State<FarmerLoginPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -97,10 +94,7 @@ class _FarmerLoginPageState extends State<FarmerLoginPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
     } finally {

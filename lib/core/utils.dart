@@ -1,5 +1,5 @@
 /// Utility functions for Uzhavu Sei AI
-/// 
+///
 /// Small helper methods for validation, formatting, and common operations.
 library;
 
@@ -15,7 +15,7 @@ class AppUtils {
     );
     return emailRegex.hasMatch(email);
   }
-  
+
   /// Validates password strength
   /// Returns null if valid, error message otherwise
   static String? validatePassword(String password) {
@@ -27,7 +27,7 @@ class AppUtils {
     }
     return null;
   }
-  
+
   /// Validates email
   /// Returns null if valid, error message otherwise
   static String? validateEmail(String email) {
@@ -39,7 +39,7 @@ class AppUtils {
     }
     return null;
   }
-  
+
   /// Validates name
   static String? validateName(String name) {
     if (name.isEmpty) {
@@ -50,22 +50,22 @@ class AppUtils {
     }
     return null;
   }
-  
+
   /// Formats date to readable string
   static String formatDate(DateTime date) {
     return DateFormat('MMM dd, yyyy').format(date);
   }
-  
+
   /// Formats date and time
   static String formatDateTime(DateTime dateTime) {
     return DateFormat('MMM dd, yyyy hh:mm a').format(dateTime);
   }
-  
+
   /// Formats currency
   static String formatCurrency(double amount, {String symbol = '₹'}) {
     return '$symbol${amount.toStringAsFixed(2)}';
   }
-  
+
   /// Shows error snackbar
   static void showErrorSnackbar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -83,7 +83,7 @@ class AppUtils {
       ),
     );
   }
-  
+
   /// Shows success snackbar
   static void showSuccessSnackbar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -94,23 +94,21 @@ class AppUtils {
       ),
     );
   }
-  
+
   /// Shows loading dialog
   static void showLoadingDialog(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
   }
-  
+
   /// Hides loading dialog
   static void hideLoadingDialog(BuildContext context) {
     Navigator.of(context).pop();
   }
-  
+
   /// Calculate distance between two coordinates (Haversine formula)
   static double calculateDistance(
     double lat1,
@@ -119,27 +117,28 @@ class AppUtils {
     double lon2,
   ) {
     const earthRadiusKm = 6371.0;
-    
+
     final dLat = _degreesToRadians(lat2 - lat1);
     final dLon = _degreesToRadians(lon2 - lon1);
-    
-    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(lat1) * math.cos(lat2) * math.sin(dLon / 2) * math.sin(dLon / 2);
-    
+
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1) *
+            math.cos(lat2) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    
+
     return earthRadiusKm * c;
   }
-  
+
   static double _degreesToRadians(double degrees) {
     return degrees * math.pi / 180;
   }
-  
+
   /// Debounce function for search
-  static void debounce(
-    Function() action,
-    Duration delay,
-  ) {
+  static void debounce(Function() action, Duration delay) {
     Future.delayed(delay, action);
   }
 }
@@ -151,7 +150,7 @@ extension StringExtensions on String {
     if (isEmpty) return this;
     return '${this[0].toUpperCase()}${substring(1)}';
   }
-  
+
   /// Truncates string to specified length
   String truncate(int maxLength) {
     if (length <= maxLength) return this;

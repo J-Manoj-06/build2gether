@@ -1,5 +1,5 @@
 /// Common Button Widget
-/// 
+///
 /// Reusable button component with consistent styling.
 library;
 
@@ -16,7 +16,7 @@ class CommonButton extends StatelessWidget {
   final IconData? icon;
   final double? width;
   final double? height;
-  
+
   const CommonButton({
     super.key,
     required this.text,
@@ -29,7 +29,7 @@ class CommonButton extends StatelessWidget {
     this.width,
     this.height,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     if (isOutlined) {
@@ -51,7 +51,7 @@ class CommonButton extends StatelessWidget {
         ),
       );
     }
-    
+
     return SizedBox(
       width: width ?? double.infinity,
       height: height ?? 50,
@@ -69,7 +69,7 @@ class CommonButton extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildButtonChild() {
     if (isLoading) {
       return const SizedBox(
@@ -81,7 +81,7 @@ class CommonButton extends StatelessWidget {
         ),
       );
     }
-    
+
     if (icon != null) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -93,13 +93,15 @@ class CommonButton extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: isOutlined ? (backgroundColor ?? AppTheme.deepGreen) : textColor,
+              color: isOutlined
+                  ? (backgroundColor ?? AppTheme.deepGreen)
+                  : textColor,
             ),
           ),
         ],
       );
     }
-    
+
     return Text(
       text,
       style: TextStyle(

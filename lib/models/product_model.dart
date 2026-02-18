@@ -1,5 +1,5 @@
 /// Product model for marketplace
-/// 
+///
 /// Represents agricultural equipment, tools, or supplies available for rent/purchase.
 library;
 
@@ -22,7 +22,7 @@ class ProductModel {
   final int stockQuantity;
   final DateTime createdAt;
   final DateTime? updatedAt;
-  
+
   ProductModel({
     required this.id,
     required this.name,
@@ -41,7 +41,7 @@ class ProductModel {
     required this.createdAt,
     this.updatedAt,
   });
-  
+
   /// Creates ProductModel from Firestore document
   factory ProductModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -64,7 +64,7 @@ class ProductModel {
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
   }
-  
+
   /// Converts ProductModel to Firestore document
   Map<String, dynamic> toFirestore() {
     return {
@@ -85,7 +85,7 @@ class ProductModel {
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
     };
   }
-  
+
   /// Creates a copy with updated fields
   ProductModel copyWith({
     String? id,
@@ -124,7 +124,7 @@ class ProductModel {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
-  
+
   @override
   String toString() {
     return 'ProductModel(id: $id, name: $name, category: $category, price: $price)';

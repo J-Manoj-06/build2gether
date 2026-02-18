@@ -1,5 +1,5 @@
 /// Main entry point for Uzhavu Sei AI
-/// 
+///
 /// Initializes Firebase and runs the app with providers.
 library;
 
@@ -10,11 +10,9 @@ import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const MyApp());
 }

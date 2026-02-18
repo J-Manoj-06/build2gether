@@ -1,5 +1,5 @@
 /// App theme configuration
-/// 
+///
 /// Defines colors, text styles, and Material theme for Uzhavu Sei AI.
 library;
 
@@ -12,18 +12,18 @@ class AppTheme {
   static const Color darkGreen = Color(0xFF1B5E20);
   static const Color darkerGreen = Color(0xFF145214);
   static const Color accentGreen = Color(0xFF4CAF50);
-  
+
   static const Color errorRed = Color(0xFFD32F2F);
   static const Color warningOrange = Color(0xFFFF9800);
   static const Color successGreen = Color(0xFF388E3C);
-  
+
   static const Color textPrimary = Color(0xFF212121);
   static const Color textSecondary = Color(0xFF757575);
   static const Color textLight = Color(0xFFFFFFFF);
-  
+
   static const Color backgroundLight = Color(0xFFFAFAFA);
   static const Color cardBackground = Color(0xFFFFFFFF);
-  
+
   /// Main app theme
   static ThemeData get lightTheme {
     return ThemeData(
@@ -36,7 +36,7 @@ class AppTheme {
         surface: cardBackground,
         background: backgroundLight,
       ),
-      
+
       // App Bar theme
       appBarTheme: const AppBarTheme(
         backgroundColor: deepGreen,
@@ -44,7 +44,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
       ),
-      
+
       // Text theme
       textTheme: const TextTheme(
         displayLarge: TextStyle(
@@ -67,20 +67,11 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: textPrimary,
         ),
-        bodyLarge: TextStyle(
-          fontSize: 16,
-          color: textPrimary,
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 14,
-          color: textSecondary,
-        ),
-        bodySmall: TextStyle(
-          fontSize: 12,
-          color: textSecondary,
-        ),
+        bodyLarge: TextStyle(fontSize: 16, color: textPrimary),
+        bodyMedium: TextStyle(fontSize: 14, color: textSecondary),
+        bodySmall: TextStyle(fontSize: 12, color: textSecondary),
       ),
-      
+
       // Input decoration theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -101,9 +92,12 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: errorRed, width: 1),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
-      
+
       // Elevated button theme
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -116,21 +110,16 @@ class AppTheme {
           elevation: 2,
         ),
       ),
-      
+
       // Card theme
       cardTheme: CardThemeData(
         elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         color: cardBackground,
       ),
-      
+
       // Icon theme
-      iconTheme: const IconThemeData(
-        color: deepGreen,
-        size: 24,
-      ),
+      iconTheme: const IconThemeData(color: deepGreen, size: 24),
     );
   }
 }
