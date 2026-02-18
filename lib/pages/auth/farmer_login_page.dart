@@ -435,7 +435,7 @@ class _FarmerLoginPageState extends State<FarmerLoginPage> {
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleLogin,
+                        onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
                           elevation: 8,
                           shadowColor: primaryColor.withOpacity(0.3),
