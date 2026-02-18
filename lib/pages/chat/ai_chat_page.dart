@@ -1,11 +1,14 @@
 /// AI Chat Page
 ///
-/// Chat interface with AI farming advisor
+/// Real-time chat interface with Gemini AI farming advisor
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../ai/find_buyers_page.dart';
+import '../../models/chat_message.dart';
+import '../../services/gemini_service.dart';
+import '../../services/chat_cache_service.dart';
 
 class AIChatPage extends StatefulWidget {
   const AIChatPage({super.key});
@@ -17,39 +20,23 @@ class AIChatPage extends StatefulWidget {
 class _AIChatPageState extends State<AIChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _isTyping = false;
 
-  // Colors matching the HTML design
+  // Services
+  final GeminiService _geminiService = GeminiService();
+  final ChatCacheService _cacheService = ChatCacheService();
+
+  // State
+  List<ChatMessage> _messages = [];
+  bool _loading = false;
+
+  // Colors matching the design
   static const Color primaryColor = Color(0xFF2F7F34);
   static const Color backgroundLight = Color(0xFFF6F8F6);
-  static const Color backgroundDark = Color(0xFF141E15);
-
-  // Sample chat messages
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'isAI': true,
-      'text':
-          'Hello! I am your AI agricultural advisor. How are your crops doing today? I can help with disease diagnosis or pest control.',
-      'time': '10:30 AM',
-    },
-    {
-      'isAI': false,
-      'text':
-          'My paddy leaves are turning yellowish at the tips. Is it a nutrient deficiency?',
-      'time': '10:32 AM',
-    },
-    {
-      'isAI': true,
-      'text':
-          'Yellowing tips in paddy often indicate **Potassium deficiency** or **Nitrogen stress**.\n\nBased on current weather data for your region, I recommend checking the soil moisture first. Would you like me to schedule a soil test for you?',
-      'hasImage': true,
-      'time': '10:33 AM',
-    },
-  ];
 
   @override
   void initState() {
     super.initState();
+    _loadCachedMessages();
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: primaryColor,
@@ -60,58 +47,160 @@ class _AIChatPageState extends State<AIChatPage> {
     );
   }
 
+  /// Load cached chat history on startup
+  Future<void> _loadCachedMessages() async {
+    final cachedMessages = await _cacheService.loadMessages();
+
+    if (cachedMessages.isEmpty) {
+      // Add welcome message if no history
+      setState(() {
+        _messages = [
+          ChatMessage(
+            text:
+                'Hello! I am your AI agricultural advisor. How are your crops doing today? I can help with disease diagnosis, pest control, fertilizer recommendations, and more.',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        ];
+      });
+      await _cacheService.saveMessages(_messages);
+    } else {
+      setState(() {
+        _messages = cachedMessages;
+      });
+    }
+
+    // Scroll to bottom after loading
+    _scrollToBottom();
+  }
+
+  /// Send message to Gemini AI
+  Future<void> _sendMessage() async {
+    final messageText = _messageController.text.trim();
+
+    // Prevent empty messages
+    if (messageText.isEmpty) return;
+
+    // Clear input immediately
+    _messageController.clear();
+
+    // Add user message
+    final userMessage = ChatMessage(
+      text: messageText,
+      isUser: true,
+      timestamp: DateTime.now(),
+    );
+
+    setState(() {
+      _messages.add(userMessage);
+      _loading = true;
+    });
+
+    _scrollToBottom();
+
+    // Convert message history to API format
+    List<Map<String, String>> history = [];
+    for (int i = 0; i < _messages.length - 1; i++) {
+      history.add({
+        'role': _messages[i].isUser ? 'user' : 'model',
+        'text': _messages[i].text,
+      });
+    }
+
+    try {
+      // Call Gemini API
+      final aiResponse = await _geminiService.sendMessage(messageText, history);
+
+      // Add AI response
+      final aiMessage = ChatMessage(
+        text: aiResponse,
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+
+      setState(() {
+        _messages.add(aiMessage);
+        _loading = false;
+      });
+
+      // Save to cache
+      await _cacheService.saveMessages(_messages);
+
+      _scrollToBottom();
+    } catch (e) {
+      // Handle error
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            text: '⚠️ Sorry, I encountered an error. Please try again.',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+        _loading = false;
+      });
+
+      _scrollToBottom();
+    }
+  }
+
+  /// Scroll to bottom of chat
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  /// Clear chat history
+  Future<void> _clearChat() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Chat History?'),
+        content: const Text(
+          'This will delete all messages. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _cacheService.clearMessages();
+      setState(() {
+        _messages = [
+          ChatMessage(
+            text:
+                'Hello! I am your AI agricultural advisor. How can I help you today?',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        ];
+      });
+      await _cacheService.saveMessages(_messages);
+    }
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
-
-    setState(() {
-      _messages.add({
-        'isAI': false,
-        'text': _messageController.text.trim(),
-        'time': TimeOfDay.now().format(context),
-      });
-      _isTyping = true;
-    });
-
-    _messageController.clear();
-
-    // Scroll to bottom
-    Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    });
-
-    // Simulate AI response
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _messages.add({
-            'isAI': true,
-            'text': 'I understand your concern. Let me analyze that for you...',
-            'time': TimeOfDay.now().format(context),
-          });
-          _isTyping = false;
-        });
-
-        // Scroll to bottom
-        Future.delayed(const Duration(milliseconds: 100), () {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        });
-      }
-    });
   }
 
   @override
@@ -138,14 +227,14 @@ class _AIChatPageState extends State<AIChatPage> {
                 ..._messages.map(
                   (message) => Padding(
                     padding: const EdgeInsets.only(bottom: 24),
-                    child: message['isAI'] as bool
-                        ? _buildAIMessage(message)
-                        : _buildUserMessage(message),
+                    child: message.isUser
+                        ? _buildUserMessage(message)
+                        : _buildAIMessage(message),
                   ),
                 ),
 
                 // Typing Indicator
-                if (_isTyping) _buildTypingIndicator(),
+                if (_loading) _buildTypingIndicator(),
               ],
             ),
           ),
@@ -204,7 +293,7 @@ class _AIChatPageState extends State<AIChatPage> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Online Advisor',
+                          'Powered by Gemini AI',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 12,
@@ -217,20 +306,10 @@ class _AIChatPageState extends State<AIChatPage> {
                 ),
               ),
 
-              // Info Button
+              // Clear chat button
               IconButton(
-                icon: const Icon(Icons.info_outline, color: Colors.white),
-                onPressed: () {
-                  // Handle info
-                },
-              ),
-
-              // More Button
-              IconButton(
-                icon: const Icon(Icons.more_vert, color: Colors.white),
-                onPressed: () {
-                  // Handle more options
-                },
+                icon: const Icon(Icons.delete_outline, color: Colors.white),
+                onPressed: _clearChat,
               ),
             ],
           ),
@@ -248,67 +327,63 @@ class _AIChatPageState extends State<AIChatPage> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
+            blurRadius: 20,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              // Icon
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.agriculture,
+                    color: primaryColor,
+                    size: 24,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.smart_toy_outlined,
-                  color: primaryColor,
-                  size: 32,
-                ),
-              ),
-
-              const SizedBox(width: 16),
-
-              // Text
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Smart Farming Assistant',
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Agriculture Assistant',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Ask me about crop health, weather forecasts, or soil quality!',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                        height: 1.4,
+                      Text(
+                        'Ask anything about farming',
+                        style: TextStyle(fontSize: 13, color: Colors.grey),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Find Buyers Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildQuickActionChip('Disease Diagnosis', Icons.bug_report),
+                _buildQuickActionChip('Pest Control', Icons.pest_control),
+                _buildQuickActionChip('Weather Tips', Icons.cloud),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
@@ -320,118 +395,109 @@ class _AIChatPageState extends State<AIChatPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                minimumSize: const Size(double.infinity, 44),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                elevation: 0,
               ),
-              icon: const Icon(Icons.search, size: 22),
-              label: const Text(
-                'Find Buyers for My Crop',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.search, size: 20),
+                  SizedBox(width: 8),
+                  Text('Find Buyers for My Crop'),
+                ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildAIMessage(Map<String, dynamic> message) {
+  Widget _buildQuickActionChip(String label, IconData icon) {
+    return InkWell(
+      onTap: () {
+        _messageController.text = 'Tell me about $label';
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: primaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: primaryColor.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: primaryColor),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: primaryColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAIMessage(ChatMessage message) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // AI Avatar
         Container(
-          width: 32,
-          height: 32,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.2),
-            shape: BoxShape.circle,
-            border: Border.all(color: primaryColor.withOpacity(0.3)),
-          ),
-          child: const Icon(
-            Icons.psychology_outlined,
             color: primaryColor,
-            size: 18,
+            borderRadius: BorderRadius.circular(10),
           ),
+          child: const Icon(Icons.smart_toy, color: Colors.white, size: 20),
         ),
 
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
 
         // Message Content
-        Flexible(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 4),
-                child: Text(
-                  'UZHAVU SEI AI',
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
               Container(
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
+                    topRight: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: primaryColor.withOpacity(0.08),
-                      blurRadius: 8,
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Image if present
-                    if (message['hasImage'] == true)
-                      ClipRRect(
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(16),
-                          topRight: Radius.circular(16),
-                        ),
-                        child: Image.network(
-                          'https://lh3.googleusercontent.com/aida-public/AB6AXuBnMhqGTq6C8sr-7Wv5X8YTnd2OeO83WKtn_YqQIOQxTnZhIoSyI-T__hylGaWSqYNxS8zr1F4wCRGdVsUv5o_OkJPGcFWHFray2JhlTRTbFxd2yYAXW8cjqprNSJUjyVaVa-qim_N1gFnPUqGwZRPg39ZVljZRvC4BhyxPryrJEnvaC82EP4OavFX_fE2tToPfmSEvm2s_Oiu33RcbGDoKAtaxOtjMGnya8LM9AXPMQHqlXaTn27p6NCLQhWWWuxuR6ZQEsnPvt34',
-                          height: 128,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 128,
-                              color: Colors.grey[200],
-                              child: const Icon(Icons.image),
-                            );
-                          },
-                        ),
-                      ),
-
-                    // Message Text
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(
-                        message['text'] as String,
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 15,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  message.text,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    height: 1.5,
+                    color: Colors.black87,
+                  ),
                 ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                message.formattedTime,
+                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
               ),
             ],
           ),
@@ -440,77 +506,65 @@ class _AIChatPageState extends State<AIChatPage> {
     );
   }
 
-  Widget _buildUserMessage(Map<String, dynamic> message) {
+  Widget _buildUserMessage(ChatMessage message) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisAlignment: MainAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Spacer(),
+
         // Message Content
         Flexible(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 4, bottom: 4),
-                child: Text(
-                  'YOU',
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: primaryColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2F7F34), Color(0xFF1B5E20)],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
+                      color: primaryColor.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Text(
-                  message['text'] as String,
+                  message.text,
                   style: const TextStyle(
-                    color: Colors.white,
                     fontSize: 15,
                     height: 1.5,
+                    color: Colors.white,
                   ),
                 ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                message.formattedTime,
+                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
               ),
             ],
           ),
         ),
 
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
 
         // User Avatar
         Container(
-          width: 32,
-          height: 32,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             color: Colors.grey[300],
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: ClipOval(
-            child: Image.network(
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuDe6KFlMdIsN58ahgc09D2PR2MT67MU5Xzy2xut6BHa3Y0CLW9vXOwbYdhgBgGFN4fbxFzxN5d8QEWMPr3Cia_zjy6nwaKW0-NXFpYICwGS-mi4fTruDKnm4Hh9V_-HNjOO8joh4Nm-7YOOXSgtTAC2vaYcmAKPuO0GnHtiyouPvkisvQuXEiPL2DNaCvaqB_lL2tI11ehFcLNC-wkMNjwnO-IL8Xf9SNAV26_QZi1jQ_FDFCl74EAsUhaOed7pJbpaanNK1roNmEo',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(Icons.person, size: 20);
-              },
-            ),
-          ),
+          child: const Icon(Icons.person, color: Colors.grey, size: 20),
         ),
       ],
     );
@@ -518,32 +572,72 @@ class _AIChatPageState extends State<AIChatPage> {
 
   Widget _buildTypingIndicator() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(width: 8),
-        Row(
-          children: List.generate(
-            3,
-            (index) => Container(
-              width: 6,
-              height: 6,
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                shape: BoxShape.circle,
-              ),
-            ),
+        // AI Avatar
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: primaryColor,
+            borderRadius: BorderRadius.circular(10),
           ),
+          child: const Icon(Icons.smart_toy, color: Colors.white, size: 20),
         ),
-        const SizedBox(width: 8),
-        Text(
-          'Uzhavu Sei AI is thinking...',
-          style: TextStyle(
-            color: Colors.grey[400],
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+
+        const SizedBox(width: 12),
+
+        // Typing Animation
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTypingDot(0),
+              const SizedBox(width: 4),
+              _buildTypingDot(1),
+              const SizedBox(width: 4),
+              _buildTypingDot(2),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTypingDot(int index) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 600),
+      builder: (context, value, child) {
+        final delay = index * 0.2;
+        final animValue = (value - delay).clamp(0.0, 1.0);
+        return Transform.translate(
+          offset: Offset(0, -4 * (1 - (animValue * 2 - 1).abs())),
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.grey[400],
+              shape: BoxShape.circle,
+            ),
+          ),
+        );
+      },
+      onEnd: () {
+        setState(() {});
+      },
     );
   }
 
@@ -551,107 +645,73 @@ class _AIChatPageState extends State<AIChatPage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[100]!)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              child: Row(
-                children: [
-                  // Add Button
-                  IconButton(
-                    icon: Icon(
-                      Icons.add_circle_outline,
-                      color: Colors.grey[400],
-                    ),
-                    onPressed: () {
-                      // Handle attachment
-                    },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              // Text Input
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(100),
                   ),
-
-                  // Text Input
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(100),
+                  child: TextField(
+                    controller: _messageController,
+                    enabled: !_loading,
+                    decoration: const InputDecoration(
+                      hintText: 'Ask AI about farming...',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
                       ),
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: const InputDecoration(
-                          hintText: 'Ask AI about farming...',
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          hintStyle: TextStyle(fontSize: 15),
-                        ),
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
+                      hintStyle: TextStyle(fontSize: 15),
                     ),
+                    onSubmitted: (_) => _sendMessage(),
+                    maxLines: null,
                   ),
-
-                  const SizedBox(width: 8),
-
-                  // Send Button
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      color: primaryColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.send,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      onPressed: _sendMessage,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
 
-            // Voice Button (Floating)
-            Positioned(
-              top: -44,
-              right: 16,
-              child: Container(
-                width: 48,
-                height: 48,
+              const SizedBox(width: 8),
+
+              // Send Button
+              Container(
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: primaryColor,
+                  color: _loading ? Colors.grey : primaryColor,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryColor.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.mic, color: Colors.white, size: 28),
-                  onPressed: () {
-                    // Handle voice input
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Voice input coming soon!'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
+                  icon: _loading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Icon(Icons.send, color: Colors.white, size: 20),
+                  onPressed: _loading ? null : _sendMessage,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
