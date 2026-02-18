@@ -5,11 +5,11 @@ library;
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/api_keys.dart';
 
 class GeminiService {
-  // 🔐 GEMINI API KEY
-  // Get your free key from: https://aistudio.google.com/app/apikey
-  static const String apiKey = "AIzaSyCwIW3etG74lkZ_vRNGhIeOr_2NwxKZxH0";
+  // 🔐 GEMINI API KEY - Now loaded from config file
+  static const String apiKey = ApiKeys.geminiApiKey;
 
   // Gemini API endpoint
   static const String apiEndpoint =

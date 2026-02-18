@@ -6,14 +6,12 @@ library;
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../config/api_keys.dart';
 
 class CloudinaryService {
-  // 🔐 CLOUDINARY CREDENTIALS
-  // ⚠️ Replace with your actual values from Cloudinary Dashboard
-  static const String cloudName =
-      "dfoxfil5q"; // Get from: https://cloudinary.com/console
-  static const String uploadPreset =
-      "uzhavu_products"; // Create in: Settings → Upload → Upload presets
+  // 🔐 CLOUDINARY CREDENTIALS - Now loaded from config file
+  static const String cloudName = ApiKeys.cloudinaryCloudName;
+  static const String uploadPreset = ApiKeys.cloudinaryUploadPreset;
 
   /// Uploads an image file to Cloudinary
   ///
