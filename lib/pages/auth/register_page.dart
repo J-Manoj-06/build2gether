@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/auth_service.dart';
 import '../../routes.dart';
+import '../main/main_page.dart';
 import 'farmer_login_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -58,6 +60,80 @@ class _RegisterPageState extends State<RegisterPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  /// Register method using AuthService
+  Future<void> _register() async {
+    // Validate form
+    if (!_formKey.currentState!.validate()) return;
+
+    // Check password match
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Passwords do not match'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show loading indicator
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Create AuthService instance
+      final authService = AuthService();
+
+      // Call register method
+      final user = await authService.register(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (mounted) {
+        if (user != null) {
+          // Success - Navigate to MainPage
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Registration successful!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainPage()),
+          );
+        } else {
+          // Error - Show SnackBar
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Registration failed. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Handle unexpected errors
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('An error occurred: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      // Hide loading indicator
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _handleRegister() async {
@@ -529,7 +605,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       width: double.infinity,
                       height: 60,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleRegister,
+                        onPressed: _isLoading ? null : _register,
                         style: ElevatedButton.styleFrom(
                           elevation: 8,
                           shadowColor: primaryColor.withOpacity(0.3),

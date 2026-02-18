@@ -5,9 +5,12 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../routes.dart';
+import '../main/main_page.dart';
+import '../auth/farmer_login_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -71,12 +74,24 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigate() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    // Check if user is logged in using FirebaseAuth
+    final currentUser = FirebaseAuth.instance.currentUser;
 
-    if (authProvider.isAuthenticated) {
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    // Add mounted check before navigation
+    if (!mounted) return;
+
+    if (currentUser != null) {
+      // User is logged in - Navigate to MainPage
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainPage()),
+      );
     } else {
-      Navigator.pushReplacementNamed(context, AppRoutes.login);
+      // User is not logged in - Navigate to FarmerLoginPage
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const FarmerLoginPage()),
+      );
     }
   }
 
