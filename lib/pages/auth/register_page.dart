@@ -153,16 +153,26 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.registerWithEmail(
+      final authService = AuthService();
+      final user = await authService.register(
         _emailController.text.trim(),
         _passwordController.text,
-        _nameController.text.trim(),
-        'farmer', // Default role for registration
       );
 
-      if (mounted && authProvider.isAuthenticated) {
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      if (mounted && user != null) {
+        // Success - Navigate to MainPage
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainPage()),
+        );
+      } else if (mounted) {
+        // Failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -181,11 +191,23 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.signInWithGoogle();
+      final authService = AuthService();
+      final user = await authService.signInWithGoogle();
 
-      if (mounted && authProvider.isAuthenticated) {
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      if (mounted) {
+        // Success - Navigate to MainPage
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainPage()),
+        );
+      } else if (mounted) {
+        // Cancelled or failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google sign-in was cancelled'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {

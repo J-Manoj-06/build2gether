@@ -112,6 +112,51 @@ class _FarmerLoginPageState extends State<FarmerLoginPage> {
     }
   }
 
+  /// Handle Google Sign-In using AuthService
+  Future<void> _handleGoogleSignInAuth() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authService = AuthService();
+
+      // Sign in with Google
+      final user = await authService.signInWithGoogle();
+
+      if (mounted) {
+        // Success - Navigate to MainPage
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainPage()),
+        );
+      } else if (mounted) {
+        // Cancelled or failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google sign-in was cancelled'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google sign-in failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -484,7 +529,7 @@ class _FarmerLoginPageState extends State<FarmerLoginPage> {
                       width: double.infinity,
                       height: 56,
                       child: OutlinedButton(
-                        onPressed: _isLoading ? null : _handleGoogleSignIn,
+                        onPressed: _isLoading ? null : _handleGoogleSignInAuth,
                         style: OutlinedButton.styleFrom(
                           backgroundColor: Colors.white,
                           side: BorderSide(
