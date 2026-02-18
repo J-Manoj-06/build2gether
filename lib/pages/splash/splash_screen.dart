@@ -6,9 +6,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../routes.dart';
 import '../main/main_page.dart';
 import '../auth/farmer_login_page.dart';
 

@@ -5,8 +5,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import '../../providers/product_provider.dart';
 
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
