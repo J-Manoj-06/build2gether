@@ -22,13 +22,13 @@ class AIMarketplaceService {
 
   /// Get recommended marketplace categories based on farmer profile
   ///
-  /// [cropType] - Type of crop being grown (e.g., "Paddy", "Wheat")
+  /// [crops] - List of crops being grown (e.g., ["Rice", "Wheat"])
   /// [location] - Farmer's location
   /// [roles] - User roles (farmer, buyer, seller, renter)
   ///
   /// Returns list of recommended product categories
   Future<List<String>> getRecommendedCategories({
-    required String cropType,
+    required List<String> crops,
     required String location,
     required List<String> roles,
   }) async {
@@ -46,7 +46,7 @@ class AIMarketplaceService {
       final prompt =
           '''You are an agriculture advisor AI.
 
-Farmer crop: $cropType
+Farmer crops: ${crops.join(', ')}
 Location: $location
 User roles: ${roles.join(', ')}
 

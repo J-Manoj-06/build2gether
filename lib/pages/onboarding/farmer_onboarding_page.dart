@@ -21,8 +21,11 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
-  final _cropController = TextEditingController();
   final _landSizeController = TextEditingController();
+  
+  // Multi-crop selection
+  final List<String> _selectedCrops = [];
+  final TextEditingController _customCropController = TextEditingController();
 
   // Multi-role selection
   final Map<String, bool> _selectedRoles = {
@@ -54,8 +57,8 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
   void dispose() {
     _nameController.dispose();
     _locationController.dispose();
-    _cropController.dispose();
     _landSizeController.dispose();
+    _customCropController.dispose();
     super.dispose();
   }
 
@@ -154,6 +157,17 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
       );
       return;
     }
+    
+    // Check if crops are selected when needed
+    if (_needsCropField() && _selectedCrops.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select at least one crop'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     if (!_formKey.currentState!.validate()) {
       return;
@@ -220,7 +234,9 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
 
       // Add conditional fields based on roles
       if (_needsCropField()) {
-        profileData['primaryCrop'] = _cropController.text.trim();
+        profileData['crops'] = _selectedCrops;
+        // Also save first crop as cropType for backwards compatibility
+        profileData['cropType'] = _selectedCrops.isNotEmpty ? _selectedCrops.first : 'General';
       }
       if (_needsLandSize()) {
         profileData['landSize'] = _landSizeController.text.trim();
@@ -407,23 +423,11 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
 
                   const SizedBox(height: 16),
 
-                  // Primary Crop Field (Show only if Farmer or Seller selected)
+                  // Crop Selection (Show only if Farmer or Seller selected)
                   if (_needsCropField())
                     Column(
                       children: [
-                        _buildInputField(
-                          controller: _cropController,
-                          label: 'Primary Crop',
-                          icon: Icons.eco_outlined,
-                          hint: 'e.g., Rice, Wheat, Cotton',
-                          validator: (value) {
-                            if (_needsCropField() &&
-                                (value == null || value.trim().isEmpty)) {
-                              return 'Please enter your primary crop';
-                            }
-                            return null;
-                          },
-                        ),
+                        _buildCropSelectionSection(),
                         const SizedBox(height: 16),
                       ],
                     ),
@@ -743,6 +747,225 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+  
+  /// Build crop selection section with chips
+  Widget _buildCropSelectionSection() {
+    // Available crop options
+    final List<String> availableCrops = [
+      'Rice',
+      'Wheat',
+      'Maize',
+      'Sugarcane',
+      'Cotton',
+      'Millets',
+      'Vegetables',
+      'Fruits',
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.eco_outlined, size: 20, color: const Color(0xFF1B5E20)),
+                const SizedBox(width: 8),
+                const Text(
+                  'Select Your Crops',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1B5E20),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Choose all crops you grow',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            // Crop chips
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                // Available crop chips
+                ...availableCrops.map((crop) {
+                  final isSelected = _selectedCrops.contains(crop);
+                  return FilterChip(
+                    label: Text(crop),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedCrops.add(crop);
+                        } else {
+                          _selectedCrops.remove(crop);
+                        }
+                      });
+                    },
+                    backgroundColor: Colors.white,
+                    selectedColor: const Color(0xFFE8F5E9),
+                    checkmarkColor: const Color(0xFF1B5E20),
+                    labelStyle: TextStyle(
+                      color: isSelected ? const Color(0xFF1B5E20) : Colors.grey[700],
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    side: BorderSide(
+                      color: isSelected ? const Color(0xFF1B5E20) : Colors.grey[300]!,
+                      width: isSelected ? 2 : 1,
+                    ),
+                  );
+                }).toList(),
+                
+                // Add custom crop button
+                ActionChip(
+                  label: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, size: 16),
+                      SizedBox(width: 4),
+                      Text('Add Custom'),
+                    ],
+                  ),
+                  onPressed: _showAddCustomCropDialog,
+                  backgroundColor: Colors.white,
+                  side: BorderSide(color: Colors.grey[400]!),
+                  labelStyle: TextStyle(color: Colors.grey[700]),
+                ),
+              ],
+            ),
+            
+            // Show selected count
+            if (_selectedCrops.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      size: 16,
+                      color: Color(0xFF1B5E20),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${_selectedCrops.length} ${_selectedCrops.length == 1 ? 'crop' : 'crops'} selected',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF1B5E20),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+  
+  /// Show dialog to add custom crop
+  void _showAddCustomCropDialog() {
+    _customCropController.clear();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.eco, color: Color(0xFF1B5E20)),
+            SizedBox(width: 12),
+            Text('Add Custom Crop'),
+          ],
+        ),
+        content: TextField(
+          controller: _customCropController,
+          decoration: InputDecoration(
+            labelText: 'Crop Name',
+            hintText: 'e.g., Turmeric, Pulses',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(
+                color: Color(0xFF1B5E20),
+                width: 2,
+              ),
+            ),
+          ),
+          textCapitalization: TextCapitalization.words,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final cropName = _customCropController.text.trim();
+              if (cropName.isNotEmpty && !_selectedCrops.contains(cropName)) {
+                setState(() {
+                  _selectedCrops.add(cropName);
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$cropName added successfully'),
+                    backgroundColor: const Color(0xFF1B5E20),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              } else if (_selectedCrops.contains(cropName)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('This crop is already selected'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1B5E20),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Add'),
+          ),
+        ],
       ),
     );
   }

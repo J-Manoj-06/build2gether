@@ -29,7 +29,8 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
   // Farmer profile data
   double? _farmerLat;
   double? _farmerLng;
-  String? _farmerCrop;
+  List<String> _farmerCrops = [];
+  String? _selectedCropFilter; // For dropdown filter
   bool _loadingProfile = true;
 
   // Nearby radius in km
@@ -57,9 +58,20 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
         setState(() {
           _farmerLat = (data['latitude'] ?? 0).toDouble();
           _farmerLng = (data['longitude'] ?? 0).toDouble();
-          _farmerCrop = data['primaryCrop'] ?? '';
+          
+          // Get crops array (new system)
+          if (data['crops'] != null && data['crops'] is List) {
+            _farmerCrops = List<String>.from(data['crops']);
+          } 
+          // Fallback to old system for backwards compatibility
+          else if (data['primaryCrop'] != null) {
+            _farmerCrops = [data['primaryCrop'] as String];
+          }
+          
           _loadingProfile = false;
         });
+        
+        print('DEBUG: Farmer crops loaded: $_farmerCrops');
       }
     } catch (e) {
       print('Error loading farmer profile: $e');
@@ -122,12 +134,12 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
       ),
       body: _loadingProfile
           ? const Center(child: CircularProgressIndicator(color: primaryColor))
-          : _farmerCrop == null || _farmerCrop!.isEmpty
+          : _farmerCrops.isEmpty
           ? _buildNoCropMessage()
           : StreamBuilder<QuerySnapshot>(
               stream: _firestore
                   .collection('buyers')
-                  .where('cropInterested', isEqualTo: _farmerCrop)
+                  .where('cropInterested', whereIn: _farmerCrops.isEmpty ? [''] : _farmerCrops)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
@@ -147,13 +159,21 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
 
                 // Process nearby buyers
                 final nearbyBuyers = _processNearbyBuyers(buyers);
+                
+                // Apply crop filter if selected
+                final filteredBuyers = _selectedCropFilter == null || _selectedCropFilter == 'All Crops'
+                    ? nearbyBuyers
+                    : nearbyBuyers.where((buyer) => buyer.cropInterested == _selectedCropFilter).toList();
 
-                if (nearbyBuyers.isEmpty) {
+                if (filteredBuyers.isEmpty) {
                   return _buildEmptyState();
                 }
 
                 return Column(
                   children: [
+                    // Crop filter dropdown
+                    _buildCropFilterDropdown(),
+                    
                     // AI Suggestion Card
                     Container(
                       width: double.infinity,
@@ -203,7 +223,7 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Found ${nearbyBuyers.length} buyers within 20 km',
+                                  'Found ${filteredBuyers.length} buyers within 20 km',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 13,
@@ -222,7 +242,9 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                       child: Row(
                         children: [
                           Text(
-                            'Buyers for $_farmerCrop',
+                            _selectedCropFilter == null || _selectedCropFilter == 'All Crops'
+                                ? 'All Crop Buyers'
+                                : 'Buyers for $_selectedCropFilter',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -231,7 +253,7 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                           ),
                           const Spacer(),
                           Text(
-                            '${nearbyBuyers.length} found',
+                            '${filteredBuyers.length} found',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey[600],
@@ -248,9 +270,9 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                     Expanded(
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: nearbyBuyers.length,
+                        itemCount: filteredBuyers.length,
                         itemBuilder: (context, index) {
-                          return _buildBuyerCard(nearbyBuyers[index]);
+                          return _buildBuyerCard(filteredBuyers[index]);
                         },
                       ),
                     ),
@@ -258,66 +280,6 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                 );
               },
             ),
-    );
-  }
-
-  /// Build empty state
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 80, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'No buyers nearby for $_farmerCrop yet',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try checking back later',
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Build no crop message
-  Widget _buildNoCropMessage() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.agriculture, size: 80, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'No crop information found',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Please complete your profile',
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -458,6 +420,137 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
               child: const Text(
                 'Call',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  /// Build crop filter dropdown
+  Widget _buildCropFilterDropdown() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.filter_list, color: primaryColor, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedCropFilter,
+                hint: const Text('Filter by crop'),
+                isExpanded: true,
+                items: [
+                  const DropdownMenuItem(
+                    value: 'All Crops',
+                    child: Text('All Crops'),
+                  ),
+                  ..._farmerCrops.map((crop) {
+                    return DropdownMenuItem(
+                      value: crop,
+                      child: Text(crop),
+                    );
+                  }).toList(),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCropFilter = value;
+                  });
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build no crop message
+  Widget _buildNoCropMessage() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.eco_outlined, size: 80, color: Colors.grey[400]),
+            const SizedBox(height: 24),
+            const Text(
+              'No Crops Selected',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Please complete your profile and add crops to find buyers.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build empty state
+  Widget _buildEmptyState() {
+    final cropText = _selectedCropFilter == null || _selectedCropFilter == 'All Crops'
+        ? 'your crops'
+        : _selectedCropFilter!;
+    
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 80, color: Colors.grey[400]),
+            const SizedBox(height: 24),
+            const Text(
+              'No Buyers Found',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No buyers nearby for $cropText within 20 km.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try checking back later or expand your search area.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[500],
               ),
             ),
           ],

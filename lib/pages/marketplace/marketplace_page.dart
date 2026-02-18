@@ -30,10 +30,10 @@ class _MarketplacePageState extends State<MarketplacePage> {
   List<ProductModel> _recommendedProducts = [];
   List<String> _roles = [];
   List<String> _aiRecommendedCategories = [];
+  List<String> _crops = [];
   double? _userLat;
   double? _userLng;
   String? _currentUserId;
-  String? _cropType;
   String? _location;
   bool _loading = true;
   bool _loadingRecommendations = true;
@@ -68,7 +68,18 @@ class _MarketplacePageState extends State<MarketplacePage> {
       _userLat = profile['latitude'] as double?;
       _userLng = profile['longitude'] as double?;
       _currentUserId = _userService.getCurrentUserId();
-      _cropType = profile['cropType'] as String? ?? 'General';
+      
+      // Get crops array (new system)
+      if (profile['crops'] != null && profile['crops'] is List) {
+        _crops = List<String>.from(profile['crops']);
+      } 
+      // Fallback to old system for backwards compatibility
+      else if (profile['cropType'] != null) {
+        _crops = [profile['cropType'] as String];
+      } else {
+        _crops = ['General'];
+      }
+      
       _location = profile['location'] as String? ?? 'Unknown';
 
       // Load AI recommendations in parallel
@@ -164,7 +175,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
     try {
       // Get AI recommended categories
       _aiRecommendedCategories = await _aiService.getRecommendedCategories(
-        cropType: _cropType ?? 'General',
+        crops: _crops.isEmpty ? ['General'] : _crops,
         location: _location ?? 'Unknown',
         roles: _roles,
       );
