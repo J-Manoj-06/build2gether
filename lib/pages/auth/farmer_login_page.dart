@@ -197,6 +197,8 @@ class _FarmerLoginPageState extends State<FarmerLoginPage> {
                       child: TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
+                        enableSuggestions: false,
                         style: const TextStyle(
                           color: primaryColor,
                           fontSize: 16,
@@ -271,6 +273,8 @@ class _FarmerLoginPageState extends State<FarmerLoginPage> {
                       child: TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
+                        enableSuggestions: false,
+                        autocorrect: false,
                         style: const TextStyle(
                           color: primaryColor,
                           fontSize: 16,

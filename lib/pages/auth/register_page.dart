@@ -215,6 +215,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         controller: _nameController,
                         keyboardType: TextInputType.name,
                         textCapitalization: TextCapitalization.words,
+                        autocorrect: false,
+                        enableSuggestions: false,
                         style: const TextStyle(
                           color: backgroundDark,
                           fontSize: 16,
@@ -287,6 +289,8 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
+                        enableSuggestions: false,
                         style: const TextStyle(
                           color: backgroundDark,
                           fontSize: 16,
@@ -359,6 +363,8 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
+                        autocorrect: false,
+                        enableSuggestions: false,
                         style: const TextStyle(
                           color: backgroundDark,
                           fontSize: 16,
@@ -445,6 +451,8 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: _obscureConfirmPassword,
+                        autocorrect: false,
+                        enableSuggestions: false,
                         style: const TextStyle(
                           color: backgroundDark,
                           fontSize: 16,

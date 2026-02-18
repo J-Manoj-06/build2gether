@@ -18,6 +18,7 @@ import 'pages/auth/reset_password_page.dart';
 import 'pages/home/home_page.dart';
 import 'pages/marketplace/marketplace_page.dart';
 import 'pages/chat/ai_chat_page.dart';
+import 'pages/profile/profile_page.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -43,6 +44,7 @@ class MyApp extends StatelessWidget {
           AppRoutes.home: (context) => const HomePage(),
           AppRoutes.marketplace: (context) => const MarketplacePage(),
           AppRoutes.aiChat: (context) => const AIChatPage(),
+          AppRoutes.profile: (context) => const ProfilePage(),
         },
       ),
     );

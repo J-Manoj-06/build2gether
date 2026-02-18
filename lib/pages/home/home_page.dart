@@ -695,13 +695,21 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, int index, bool isActive) {
+  Widget _buildNavItem(
+    IconData icon,
+    String label,
+    int index,
+    bool isActive, {
+    VoidCallback? onTap,
+  }) {
     return InkWell(
-      onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
-      },
+      onTap:
+          onTap ??
+          () {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
