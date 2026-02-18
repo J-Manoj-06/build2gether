@@ -15,6 +15,7 @@ import 'pages/splash/splash_screen.dart';
 import 'pages/auth/farmer_login_page.dart';
 import 'pages/auth/register_page.dart';
 import 'pages/main/main_page.dart';
+import 'pages/onboarding/farmer_onboarding_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +55,7 @@ class MyApp extends StatelessWidget {
           '/login': (context) => const FarmerLoginPage(),
           '/register': (context) => const RegisterPage(),
           '/main': (context) => const MainPage(),
+          '/onboarding': (context) => const FarmerOnboardingPage(),
         },
       ),
     );

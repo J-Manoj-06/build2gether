@@ -5,11 +5,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../services/auth_service.dart';
-import '../../routes.dart';
-import '../main/main_page.dart';
+import '../onboarding/farmer_onboarding_page.dart';
 import 'farmer_login_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -95,16 +92,20 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (mounted) {
         if (user != null) {
-          // Success - Navigate to MainPage
+          // Success - Navigate to Onboarding
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Registration successful!'),
+              content: Text(
+                'Registration successful! Let\'s set up your profile',
+              ),
               backgroundColor: Colors.green,
             ),
           );
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const MainPage()),
+            MaterialPageRoute(
+              builder: (context) => const FarmerOnboardingPage(),
+            ),
           );
         } else {
           // Error - Show SnackBar
@@ -160,10 +161,10 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       if (mounted && user != null) {
-        // Success - Navigate to MainPage
+        // Success - Navigate to Onboarding
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainPage()),
+          MaterialPageRoute(builder: (context) => const FarmerOnboardingPage()),
         );
       } else if (mounted) {
         // Failed
@@ -195,10 +196,10 @@ class _RegisterPageState extends State<RegisterPage> {
       final user = await authService.signInWithGoogle();
 
       if (mounted) {
-        // Success - Navigate to MainPage
+        // Success - Navigate to Onboarding
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainPage()),
+          MaterialPageRoute(builder: (context) => const FarmerOnboardingPage()),
         );
       } else if (mounted) {
         // Cancelled or failed

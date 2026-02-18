@@ -1,12 +1,13 @@
 /// Main Page
 ///
-/// Main navigation hub with bottom navigation bar
+/// Main navigation hub with centered AI FAB
 library;
 
 import 'package:flutter/material.dart';
 import '../home/home_page.dart';
 import '../marketplace/marketplace_page.dart';
 import '../chat/ai_chat_page.dart';
+import '../alerts/alerts_page.dart';
 import '../profile/profile_page.dart';
 
 class MainPage extends StatefulWidget {
@@ -20,62 +21,51 @@ class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
 
   // Colors
-  static const Color primaryColor = Color(0xFF1C5F21);
+  static const Color primaryColor = Color(0xFF2E7D32);
   static const Color backgroundLight = Color(0xFFF5F7F6);
 
   // Pages list
   final List<Widget> _pages = [
     const HomePage(),
     const MarketplacePage(),
-    const AIChatPage(),
+    const AlertsPage(),
     const ProfilePage(),
   ];
+
+  void _openAIAdvisor() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AIChatPage()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Display current page
-          IndexedStack(index: _currentIndex, children: _pages),
-
-          // Bottom Navigation Bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildBottomNavigationBar(),
-          ),
-        ],
+      body: IndexedStack(index: _currentIndex, children: _pages),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openAIAdvisor,
+        backgroundColor: primaryColor,
+        elevation: 6,
+        child: const Icon(Icons.smart_toy, size: 32, color: Colors.white),
       ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
-        border: Border(top: BorderSide(color: Colors.grey[200]!)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        color: Colors.white,
+        elevation: 8,
         child: SizedBox(
-          height: 70,
+          height: 65,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(icon: Icons.home, label: 'Home', index: 0),
               _buildNavItem(icon: Icons.store, label: 'Marketplace', index: 1),
+              const SizedBox(width: 40), // Space for FAB
               _buildNavItem(
-                icon: Icons.smart_toy_outlined,
-                label: 'AI Chat',
+                icon: Icons.notifications_outlined,
+                label: 'Alerts',
                 index: 2,
               ),
               _buildNavItem(
@@ -97,14 +87,13 @@ class _MainPageState extends State<MainPage> {
   }) {
     final isActive = _currentIndex == index;
 
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,

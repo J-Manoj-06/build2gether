@@ -6,8 +6,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../main/main_page.dart';
 import '../auth/farmer_login_page.dart';
+import '../onboarding/farmer_onboarding_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -70,7 +72,7 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
-  void _navigate() {
+  void _navigate() async {
     // Check if user is logged in using FirebaseAuth
     final currentUser = FirebaseAuth.instance.currentUser;
 
@@ -78,11 +80,38 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     if (currentUser != null) {
-      // User is logged in - Navigate to MainPage
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainPage()),
-      );
+      // User is logged in - Check if profile is completed
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.uid)
+            .get();
+
+        if (!mounted) return;
+
+        if (userDoc.exists && userDoc.data()?['profileCompleted'] == true) {
+          // Profile completed - Navigate to MainPage
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainPage()),
+          );
+        } else {
+          // Profile not completed - Navigate to Onboarding
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const FarmerOnboardingPage(),
+            ),
+          );
+        }
+      } catch (e) {
+        // If error checking profile, navigate to onboarding to be safe
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const FarmerOnboardingPage()),
+        );
+      }
     } else {
       // User is not logged in - Navigate to FarmerLoginPage
       Navigator.pushReplacement(
