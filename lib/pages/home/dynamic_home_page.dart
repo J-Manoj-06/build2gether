@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/user_role.dart';
 import '../ai/find_buyers_page.dart';
 import '../chat/ai_chat_page.dart';
+import '../marketplace/add_product_page.dart';
 
 class DynamicHomePage extends StatefulWidget {
   const DynamicHomePage({super.key});
@@ -356,7 +357,12 @@ class _DynamicHomePageState extends State<DynamicHomePage> {
           gradient: const LinearGradient(
             colors: [Color(0xFFE65100), Color(0xFFBF360C)],
           ),
-          onTap: () {},
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AddProductPage()),
+            );
+          },
         ),
 
         const SizedBox(height: 12),
