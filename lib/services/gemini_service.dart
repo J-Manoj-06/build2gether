@@ -19,15 +19,30 @@ class GeminiService {
   ///
   /// [message] - The current user message
   /// [history] - Previous conversation history
+  /// [language] - The language for AI responses
   ///
   /// Returns AI response text or error message
   Future<String> sendMessage(
     String message,
-    List<Map<String, String>> history,
-  ) async {
+    List<Map<String, String>> history, {
+    String language = 'English',
+  }) async {
     try {
       // Build conversation contents array
       List<Map<String, dynamic>> contents = [];
+
+      // Add system instruction as first message if history is empty
+      if (history.isEmpty) {
+        contents.add({
+          'parts': [
+            {
+              'text':
+                  'You are a helpful agricultural advisor. Answer in $language language. Keep responses concise (2-3 short paragraphs). Focus on practical farming advice.',
+            },
+          ],
+          'role': 'model',
+        });
+      }
 
       // Add conversation history
       for (var msg in history) {
@@ -39,10 +54,10 @@ class GeminiService {
         });
       }
 
-      // Add current user message
+      // Add current user message with language instruction
       contents.add({
         'parts': [
-          {'text': message},
+          {'text': 'Answer in $language: $message'},
         ],
         'role': 'user',
       });

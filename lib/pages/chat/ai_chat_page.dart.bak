@@ -185,14 +185,14 @@ class _AIChatPageState extends State<AIChatPage> {
   String _stripMarkdown(String text) {
     // Remove bold (**text**)
     text = text.replaceAll(RegExp(r'\*\*([^*]+)\*\*'), r'$1');
-
+    
     // Remove italic (*text* or _text_)
     text = text.replaceAll(RegExp(r'\*([^*]+)\*'), r'$1');
     text = text.replaceAll(RegExp(r'_([^_]+)_'), r'$1');
-
+    
     // Clean up extra whitespace
     text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-
+    
     return text.trim();
   }
 
@@ -358,42 +358,6 @@ class _AIChatPageState extends State<AIChatPage> {
                 ),
               ),
 
-              // Language Selector
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: DropdownButton<String>(
-                  value: _selectedLanguage,
-                  icon: const Icon(
-                    Icons.language,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                  dropdownColor: primaryColor,
-                  underline: const SizedBox(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  items: _languages.map((lang) {
-                    return DropdownMenuItem<String>(
-                      value: lang['name'],
-                      child: Text(lang['name']!),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      _saveLanguagePreference(value);
-                    }
-                  },
-                ),
-              ),
-
-              const SizedBox(width: 8),
               // Clear chat button
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.white),
