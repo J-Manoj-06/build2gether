@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../models/product_model.dart';
 import '../../services/user_service.dart';
 import '../../services/ai_marketplace_service.dart';
+import 'product_detail_page.dart';
 
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
@@ -633,161 +634,222 @@ class _MarketplacePageState extends State<MarketplacePage> {
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailPage(product: product),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Product image
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(14),
-                ),
-                child: product.imageUrls.isNotEmpty
-                    ? Image.network(
-                        product.imageUrls.first,
-                        height: 120,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            height: 120,
-                            color: lightGreen,
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                value:
-                                    loadingProgress.expectedTotalBytes != null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                    : null,
-                                valueColor: const AlwaysStoppedAnimation<Color>(
-                                  primaryColor,
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Product image
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(14),
+                  ),
+                  child: product.imageUrls.isNotEmpty
+                      ? Image.network(
+                          product.imageUrls.first,
+                          height: 120,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              height: 120,
+                              color: lightGreen,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value:
+                                      loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                      : null,
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                        primaryColor,
+                                      ),
                                 ),
                               ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            print(
+                              '❌ Error loading image for ${product.name}: $error',
+                            );
+                            return _buildPlaceholderImage();
+                          },
+                        )
+                      : _buildPlaceholderImage(),
+                ),
+
+                // "My Listing" badge for sellers
+                if (isOwnListing)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'My Listing',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            // Product details
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Product name
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // Location name
+                  if (product.location != null)
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_city,
+                          size: 12,
+                          color: primaryColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            product.location!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
                             ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          print(
-                            '❌ Error loading image for ${product.name}: $error',
-                          );
-                          return _buildPlaceholderImage();
-                        },
-                      )
-                    : _buildPlaceholderImage(),
-              ),
-
-              // "My Listing" badge for sellers
-              if (isOwnListing)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                    decoration: BoxDecoration(
-                      color: primaryColor,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      'My Listing',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
 
-          // Product details
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Product name
-                Text(
-                  product.name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  if (product.location != null) const SizedBox(height: 4),
 
-                const SizedBox(height: 6),
-
-                // Distance
-                if (product.distance != null)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 12,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          '${product.distance!.toStringAsFixed(1)} km',
+                  // Distance
+                  if (product.distance != null)
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: 12,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${product.distance!.toStringAsFixed(1)} km away',
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey[600],
                           ),
-                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+
+                  const SizedBox(height: 8),
+
+                  // Rental price with type
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: lightGreen,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '₹${product.price.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                            Text(
+                              ' / ${_getPriceTypeLabel(product.priceType)}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-
-                const SizedBox(height: 8),
-
-                // Price
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: lightGreen,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '₹${product.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  String _getPriceTypeLabel(String priceType) {
+    switch (priceType.toLowerCase()) {
+      case 'per_hour':
+        return 'hour';
+      case 'per_day':
+        return 'day';
+      default:
+        return 'fixed';
+    }
   }
 
   Widget _buildPlaceholderImage() {

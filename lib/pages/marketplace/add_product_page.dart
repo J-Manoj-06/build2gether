@@ -29,6 +29,7 @@ class _AddProductPageState extends State<AddProductPage> {
   File? _selectedImage;
   String? _selectedCategory;
   String? _selectedProductType;
+  String? _selectedPriceType;
   bool _loading = false;
 
   // Image picker instance
@@ -53,6 +54,9 @@ class _AddProductPageState extends State<AddProductPage> {
     'Fertilizer',
     'Equipment',
   ];
+
+  // Price Types
+  final List<String> _priceTypes = ['Fixed', 'Per Hour', 'Per Day'];
 
   // Colors
   static const Color primaryColor = Color(0xFF2E7D32);
@@ -156,6 +160,12 @@ class _AddProductPageState extends State<AddProductPage> {
       return;
     }
 
+    // Check if price type is selected
+    if (_selectedPriceType == null) {
+      _showSnackBar('Please select a price type', isError: true);
+      return;
+    }
+
     setState(() {
       _loading = true;
     });
@@ -189,6 +199,15 @@ class _AddProductPageState extends State<AddProductPage> {
       // Step 3: Create product document
       _showSnackBar('Saving product...');
       print('DEBUG: Adding product with imageUrl: $imageUrl');
+
+      // Convert price type to lowercase with underscore
+      String priceTypeValue = 'fixed';
+      if (_selectedPriceType == 'Per Hour') {
+        priceTypeValue = 'per_hour';
+      } else if (_selectedPriceType == 'Per Day') {
+        priceTypeValue = 'per_day';
+      }
+
       await FirebaseFirestore.instance.collection('products').add({
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -200,7 +219,7 @@ class _AddProductPageState extends State<AddProductPage> {
         'imageUrls': [imageUrl], // Array of image URLs
         'ownerId': userId,
         'ownerName': userName,
-        'priceType': 'fixed',
+        'priceType': priceTypeValue, // fixed, per_hour, per_day
         'location': userLocation,
         'latitude': userLat,
         'longitude': userLng,
@@ -337,6 +356,11 @@ class _AddProductPageState extends State<AddProductPage> {
                   return null;
                 },
               ),
+
+              const SizedBox(height: 16),
+
+              // Price Type Dropdown
+              _buildPriceTypeDropdown(),
 
               const SizedBox(height: 16),
 
@@ -552,6 +576,48 @@ class _AddProductPageState extends State<AddProductPage> {
         validator: (value) {
           if (value == null || value.isEmpty) {
             return 'Please select a category';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+  Widget _buildPriceTypeDropdown() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: DropdownButtonFormField<String>(
+        value: _selectedPriceType,
+        decoration: InputDecoration(
+          labelText: 'Price Type',
+          prefixIcon: Icon(Icons.attach_money, color: primaryColor),
+          border: InputBorder.none,
+          helperText: 'How the price is calculated',
+          helperStyle: TextStyle(fontSize: 11, color: Colors.grey[600]),
+        ),
+        hint: const Text('Select price type'),
+        items: _priceTypes.map((type) {
+          return DropdownMenuItem(value: type, child: Text(type));
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedPriceType = value;
+          });
+        },
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please select a price type';
           }
           return null;
         },

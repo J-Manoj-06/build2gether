@@ -49,6 +49,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        
+        <!-- Razorpay API Key -->
+        <meta-data
+            android:name="com.razorpay.ApiKey"
+            android:value="rzp_test_1DP5mmOlF5G5ag"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
