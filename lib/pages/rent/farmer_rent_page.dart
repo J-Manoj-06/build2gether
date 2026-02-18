@@ -549,9 +549,37 @@ class _FarmerRentPageState extends State<FarmerRentPage> {
                       equipmentList = _sortEquipmentByDistance(equipmentList);
 
                       // Filter by search query
-                      equipmentList = _filterEquipment(equipmentList);
+                      final filteredEquipmentList = _filterEquipment(
+                        equipmentList,
+                      );
 
-                      if (equipmentList.isEmpty) {
+                      // Show empty state only if search query returns no results
+                      if (filteredEquipmentList.isEmpty &&
+                          _searchQuery.isNotEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: 80,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No equipment found for "$_searchQuery"',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      // If no equipment at all in database
+                      if (filteredEquipmentList.isEmpty) {
                         return Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -563,10 +591,18 @@ class _FarmerRentPageState extends State<FarmerRentPage> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'No equipment available nearby',
+                                'No equipment available yet',
                                 style: TextStyle(
                                   fontSize: 18,
                                   color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Be the first to list your equipment!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
                                 ),
                               ),
                             ],
@@ -574,16 +610,19 @@ class _FarmerRentPageState extends State<FarmerRentPage> {
                         );
                       }
 
+                      // Use filtered list
+                      final displayList = filteredEquipmentList;
+
                       return ListView.builder(
                         padding: const EdgeInsets.all(16),
-                        itemCount: equipmentList.length + 1,
+                        itemCount: displayList.length + 1,
                         itemBuilder: (context, index) {
-                          if (index == equipmentList.length) {
+                          if (index == displayList.length) {
                             // My Rental Requests section
                             return _buildMyRequestsSection();
                           }
 
-                          return _buildEquipmentCard(equipmentList[index]);
+                          return _buildEquipmentCard(displayList[index]);
                         },
                       );
                     },

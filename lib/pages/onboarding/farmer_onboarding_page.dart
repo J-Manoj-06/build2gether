@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geocoding/geocoding.dart';
 import '../main/main_page.dart';
 
 class FarmerOnboardingPage extends StatefulWidget {
@@ -90,12 +91,42 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
           .map((entry) => entry.key)
           .toList();
 
+      // Convert location to coordinates using geocoding
+      final locationText = _locationController.text.trim();
+      double? latitude;
+      double? longitude;
+
+      try {
+        final locations = await locationFromAddress(locationText);
+        if (locations.isNotEmpty) {
+          latitude = locations.first.latitude;
+          longitude = locations.first.longitude;
+        }
+      } catch (e) {
+        // Geocoding failed
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Could not find location: $locationText. Please enter a valid city or location.',
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+
       // Build profile data
       final Map<String, dynamic> profileData = {
         'name': _nameController.text.trim(),
         'email': currentUser.email,
         'roles': roles,
-        'location': _locationController.text.trim(),
+        'locationName': locationText,
+        'latitude': latitude,
+        'longitude': longitude,
         'experience': _selectedExperience,
         'profileCompleted': true,
         'createdAt': FieldValue.serverTimestamp(),

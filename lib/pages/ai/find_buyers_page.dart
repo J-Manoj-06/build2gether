@@ -1,9 +1,14 @@
 /// Find Buyers Page
 ///
-/// AI-powered buyer matching for farmers
+/// Real geo-based buyer discovery with distance calculation
 library;
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../models/buyer_model.dart';
 
 class FindBuyersPage extends StatefulWidget {
   const FindBuyersPage({super.key});
@@ -17,63 +22,90 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
   static const Color primaryColor = Color(0xFF2E7D32);
   static const Color lightGreen = Color(0xFFE8F5E9);
 
-  // Selected filters
-  String _selectedCrop = 'Rice';
-  String _selectedDistance = '10 km';
+  // Firebase instances
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Crop types
-  final List<String> _cropTypes = [
-    'Rice',
-    'Wheat',
-    'Cotton',
-    'Sugarcane',
-    'Vegetables',
-    'Fruits',
-    'Pulses',
-    'Oilseeds',
-  ];
+  // Farmer profile data
+  double? _farmerLat;
+  double? _farmerLng;
+  String? _farmerCrop;
+  bool _loadingProfile = true;
 
-  // Distance options
-  final List<String> _distances = ['5 km', '10 km', '25 km', '50 km', '100 km'];
+  // Nearby radius in km
+  final double _nearbyRadius = 20.0;
 
-  // Sample buyer data
-  final List<Map<String, dynamic>> _buyers = [
-    {
-      'name': 'GreenField Traders',
-      'distance': '3.2 km',
-      'demand': 'Looking for 2 tons of rice',
-      'rating': 4.6,
-      'icon': Icons.store,
-    },
-    {
-      'name': 'AgriConnect Buyers',
-      'distance': '5.8 km',
-      'demand': 'Need 5 tons of premium rice',
-      'rating': 4.8,
-      'icon': Icons.business,
-    },
-    {
-      'name': 'FarmDirect Mills',
-      'distance': '7.5 km',
-      'demand': 'Seeking 10 tons bulk rice',
-      'rating': 4.5,
-      'icon': Icons.factory,
-    },
-    {
-      'name': 'Urban Grain Co.',
-      'distance': '9.1 km',
-      'demand': 'Interested in 3 tons organic rice',
-      'rating': 4.7,
-      'icon': Icons.storefront,
-    },
-    {
-      'name': 'Local Market Hub',
-      'distance': '2.5 km',
-      'demand': 'Daily requirement: 500 kg rice',
-      'rating': 4.4,
-      'icon': Icons.shopping_bag,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadFarmerProfile();
+  }
+
+  /// Load farmer profile from Firestore
+  Future<void> _loadFarmerProfile() async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) return;
+
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        setState(() {
+          _farmerLat = (data['latitude'] ?? 0).toDouble();
+          _farmerLng = (data['longitude'] ?? 0).toDouble();
+          _farmerCrop = data['primaryCrop'] ?? '';
+          _loadingProfile = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading farmer profile: $e');
+      setState(() => _loadingProfile = false);
+    }
+  }
+
+  /// Calculate distance and filter buyers within radius
+  List<Buyer> _processNearbyBuyers(List<Buyer> buyers) {
+    if (_farmerLat == null || _farmerLng == null) return [];
+
+    // Calculate distance for each buyer
+    for (var buyer in buyers) {
+      final distanceInMeters = Geolocator.distanceBetween(
+        _farmerLat!,
+        _farmerLng!,
+        buyer.latitude,
+        buyer.longitude,
+      );
+      buyer.distance = distanceInMeters / 1000; // Convert to km
+    }
+
+    // Filter within radius
+    final nearbyBuyers = buyers.where((buyer) {
+      return buyer.distance != null && buyer.distance! <= _nearbyRadius;
+    }).toList();
+
+    // Sort by distance (nearest first)
+    nearbyBuyers.sort((a, b) => a.distance!.compareTo(b.distance!));
+
+    return nearbyBuyers;
+  }
+
+  /// Launch phone dialer
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch phone dialer')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,242 +120,209 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          // AI Suggestion Card
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [primaryColor, primaryColor.withOpacity(0.8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: primaryColor.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.lightbulb_outline,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'AI Recommendation',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'AI found buyers interested in your crop nearby.',
-                        style: TextStyle(color: Colors.white, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+      body: _loadingProfile
+          ? const Center(child: CircularProgressIndicator(color: primaryColor))
+          : _farmerCrop == null || _farmerCrop!.isEmpty
+          ? _buildNoCropMessage()
+          : StreamBuilder<QuerySnapshot>(
+              stream: _firestore
+                  .collection('buyers')
+                  .where('cropInterested', isEqualTo: _farmerCrop)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
 
-          // Filter Section
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Crop Type Dropdown
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Crop Type',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
+                if (!snapshot.hasData) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: primaryColor),
+                  );
+                }
+
+                // Convert to Buyer list
+                List<Buyer> buyers = snapshot.data!.docs
+                    .map((doc) => Buyer.fromFirestore(doc))
+                    .toList();
+
+                // Process nearby buyers
+                final nearbyBuyers = _processNearbyBuyers(buyers);
+
+                if (nearbyBuyers.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                return Column(
+                  children: [
+                    // AI Suggestion Card
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [primaryColor, primaryColor.withOpacity(0.8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      DropdownButton<String>(
-                        value: _selectedCrop,
-                        isExpanded: true,
-                        underline: const SizedBox(),
-                        icon: const Icon(
-                          Icons.arrow_drop_down,
-                          color: primaryColor,
-                        ),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        items: _cropTypes.map((String crop) {
-                          return DropdownMenuItem<String>(
-                            value: crop,
-                            child: Text(crop),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          if (newValue != null) {
-                            setState(() {
-                              _selectedCrop = newValue;
-                            });
-                          }
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.location_on,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Nearby Buyers',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Found ${nearbyBuyers.length} buyers within 20 km',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Results Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Buyers for $_farmerCrop',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${nearbyBuyers.length} found',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Buyer List
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: nearbyBuyers.length,
+                        itemBuilder: (context, index) {
+                          return _buildBuyerCard(nearbyBuyers[index]);
                         },
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-
-                // Distance Dropdown
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Distance',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      DropdownButton<String>(
-                        value: _selectedDistance,
-                        isExpanded: true,
-                        underline: const SizedBox(),
-                        icon: const Icon(
-                          Icons.arrow_drop_down,
-                          color: primaryColor,
-                        ),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        items: _distances.map((String distance) {
-                          return DropdownMenuItem<String>(
-                            value: distance,
-                            child: Text(distance),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          if (newValue != null) {
-                            setState(() {
-                              _selectedDistance = newValue;
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Results Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                const Text(
-                  'Available Buyers',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${_buyers.length} found',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Buyer List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _buyers.length,
-              itemBuilder: (context, index) {
-                final buyer = _buyers[index];
-                return _buildBuyerCard(buyer);
+                    ),
+                  ],
+                );
               },
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Start AI negotiation chat
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('AI Negotiation Chat coming soon!'),
-              duration: Duration(seconds: 2),
+    );
+  }
+
+  /// Build empty state
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 80, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No buyers nearby for $_farmerCrop yet',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          );
-        },
-        backgroundColor: primaryColor,
-        icon: const Icon(Icons.chat, color: Colors.white),
-        label: const Text(
-          'Start AI Chat',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            const SizedBox(height: 8),
+            Text(
+              'Try checking back later',
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildBuyerCard(Map<String, dynamic> buyer) {
+  /// Build no crop message
+  Widget _buildNoCropMessage() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.agriculture, size: 80, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No crop information found',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please complete your profile',
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build buyer card
+  Widget _buildBuyerCard(Buyer buyer) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -349,7 +348,7 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                 color: lightGreen,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(buyer['icon'], color: primaryColor, size: 28),
+              child: const Icon(Icons.store, color: primaryColor, size: 28),
             ),
 
             const SizedBox(width: 14),
@@ -363,7 +362,7 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          buyer['name'],
+                          buyer.companyName,
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -384,7 +383,7 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '${buyer['rating']}',
+                              buyer.rating.toStringAsFixed(1),
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -412,18 +411,23 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        buyer['distance'],
+                        '${buyer.distance!.toStringAsFixed(1)} km away',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '• ${buyer.locationName}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    buyer['demand'],
+                    'Needs ${buyer.requiredQuantity.toStringAsFixed(0)} tons',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.grey[700],
@@ -438,9 +442,7 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
 
             // Contact Button
             ElevatedButton(
-              onPressed: () {
-                _showContactDialog(buyer['name']);
-              },
+              onPressed: () => _makePhoneCall(buyer.phone),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
@@ -454,47 +456,12 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                 elevation: 0,
               ),
               child: const Text(
-                'Contact',
+                'Call',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showContactDialog(String buyerName) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Contact $buyerName'),
-        content: const Text(
-          'Contact feature will connect you directly with the buyer via chat or phone call.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Contact request sent!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Send Request'),
-          ),
-        ],
       ),
     );
   }
