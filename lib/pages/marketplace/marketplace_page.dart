@@ -135,11 +135,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
           ),
 
           // Floating Action Button
-          Positioned(
-            bottom: 110,
-            right: 24,
-            child: _buildFAB(),
-          ),
+          Positioned(bottom: 110, right: 24, child: _buildFAB()),
 
           // Bottom Navigation
           Positioned(
@@ -163,11 +159,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
           child: Row(
             children: [
               // Menu Icon
-              const Icon(
-                Icons.menu,
-                color: Colors.white,
-                size: 24,
-              ),
+              const Icon(Icons.menu, color: Colors.white, size: 24),
 
               const SizedBox(width: 12),
 
@@ -264,13 +256,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
         child: TextField(
           decoration: InputDecoration(
             hintText: 'Search tools, fertilizers...',
-            hintStyle: TextStyle(
-              color: textGray.withOpacity(0.6),
-            ),
-            prefixIcon: Icon(
-              Icons.search,
-              color: textGray,
-            ),
+            hintStyle: TextStyle(color: textGray.withOpacity(0.6)),
+            prefixIcon: Icon(Icons.search, color: textGray),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -455,11 +442,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                   // Rating
                   Row(
                     children: [
-                      const Icon(
-                        Icons.star,
-                        color: Colors.amber,
-                        size: 16,
-                      ),
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
                       const SizedBox(width: 4),
                       Text(
                         product['rating'].toString(),
@@ -492,9 +475,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                           });
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(
-                                '${product['name']} added to cart',
-                              ),
+                              content: Text('${product['name']} added to cart'),
                               duration: const Duration(seconds: 1),
                               behavior: SnackBarBehavior.floating,
                             ),
@@ -541,10 +522,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
             offset: const Offset(0, 8),
           ),
         ],
-        border: Border.all(
-          color: Colors.white,
-          width: 4,
-        ),
+        border: Border.all(color: Colors.white, width: 4),
       ),
       child: Material(
         color: Colors.transparent,
@@ -560,11 +538,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
           },
           borderRadius: BorderRadius.circular(100),
           child: const Center(
-            child: Icon(
-              Icons.add,
-              color: Colors.white,
-              size: 30,
-            ),
+            child: Icon(Icons.add, color: Colors.white, size: 30),
           ),
         ),
       ),
@@ -575,11 +549,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey[200]!,
-          ),
-        ),
+        border: Border(top: BorderSide(color: Colors.grey[200]!)),
       ),
       child: SafeArea(
         top: false,
@@ -615,11 +585,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 24,
-            color: isActive ? primaryColor : textGray,
-          ),
+          Icon(icon, size: 24, color: isActive ? primaryColor : textGray),
           const SizedBox(height: 4),
           Text(
             label,
