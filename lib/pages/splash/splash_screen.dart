@@ -202,126 +202,138 @@ class _SplashScreenState extends State<SplashScreen>
           ),
 
           // Main Content
-          SafeArea(
-            child: Column(
-              children: [
-                // Status bar spacer
-                const SizedBox(height: 48),
+          Center(
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Status bar spacer
+                  const SizedBox(height: 48),
 
-                // Central Branding Content
-                Expanded(
-                  child: FadeTransition(
+                  // Central Branding Content
+                  Expanded(
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: ScaleTransition(
+                        scale: _scaleAnimation,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Circular Logo Container
+                            Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: primaryColor.withValues(alpha: 0.1),
+                                    blurRadius: 40,
+                                    spreadRadius: 10,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.agriculture,
+                                size: 60,
+                                color: primaryColor,
+                              ),
+                            ),
+
+                            const SizedBox(height: 32),
+
+                            // Text Branding
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // App Title
+                                  const Text(
+                                    'Uzhavu Sei AI',
+                                    style: TextStyle(
+                                      color: primaryColor,
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.2,
+                                      letterSpacing: -0.5,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+
+                                  const SizedBox(height: 8),
+
+                                  // Subtitle
+                                  Text(
+                                    'Empowering Farmers with Intelligence',
+                                    style: TextStyle(
+                                      color: primaryColor.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.5,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Footer / Loading Section
+                  FadeTransition(
                     opacity: _fadeAnimation,
-                    child: ScaleTransition(
-                      scale: _scaleAnimation,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 64),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Circular Logo Container
-                          Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: primaryColor.withOpacity(0.1),
-                                  blurRadius: 40,
-                                  spreadRadius: 10,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.agriculture,
-                              size: 60,
-                              color: primaryColor,
+                          // Material Style Loader
+                          SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                primaryColor,
+                              ),
+                              backgroundColor: primaryColor.withValues(
+                                alpha: 0.1,
+                              ),
                             ),
                           ),
 
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 16),
 
-                          // Text Branding
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Column(
-                              children: [
-                                // App Title
-                                const Text(
-                                  'Uzhavu Sei AI',
-                                  style: TextStyle(
-                                    color: primaryColor,
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w800,
-                                    height: 1.2,
-                                    letterSpacing: -0.5,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-
-                                const SizedBox(height: 8),
-
-                                // Subtitle
-                                Text(
-                                  'Empowering Farmers with Intelligence',
-                                  style: TextStyle(
-                                    color: primaryColor.withOpacity(0.6),
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.5,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                          // Version Number
+                          Text(
+                            'V1.0.4',
+                            style: TextStyle(
+                              color: primaryColor.withValues(alpha: 0.4),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 2,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                ),
 
-                // Footer / Loading Section
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 64),
-                    child: Column(
-                      children: [
-                        // Material Style Loader
-                        SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 3,
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              primaryColor,
-                            ),
-                            backgroundColor: primaryColor.withOpacity(0.1),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Version Number
-                        Text(
-                          'V1.0.4',
-                          style: TextStyle(
-                            color: primaryColor.withOpacity(0.4),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // iOS Home Indicator Safe Area Spacer
-                const SizedBox(height: 24),
-              ],
+                  // iOS Home Indicator Safe Area Spacer
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         ],

@@ -1,13 +1,16 @@
-/// Profile & Settings Page
+/// Profile Page - Farmer/Seller Identity Dashboard
 ///
-/// User profile with settings and logout functionality
+/// Displays real user information, farm details, and activity statistics
 library;
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../routes.dart';
+import '../../services/cloudinary_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -17,15 +20,35 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // Colors matching the HTML design
+  // Colors
   static const Color primaryColor = Color(0xFF2F7F34);
   static const Color backgroundLight = Color(0xFFF5F7F6);
   static const Color logoutRed = Color(0xFFE53935);
 
+  // User Data
+  String userName = '';
+  String userEmail = '';
+  String locationName = '';
+  List<String> crops = [];
+  List<String> roles = [];
+  String? landSize;
+  String? profileImageUrl;
+  String? farmingType;
+
+  // Activity Stats
+  int productsCount = 0;
+  int rentalsCount = 0;
+  int ordersCount = 0;
+
+  bool isLoading = true;
+  bool isUploadingImage = false;
+
+  final ImagePicker _imagePicker = ImagePicker();
+  final CloudinaryService _cloudinaryService = CloudinaryService();
+
   @override
   void initState() {
     super.initState();
-    // Set system UI overlay style
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: primaryColor,
@@ -34,66 +57,224 @@ class _ProfilePageState extends State<ProfilePage> {
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
     );
+    _loadUserData();
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final userName = authProvider.userModel?.name ?? 'Farmer Name';
-    final userEmail = authProvider.userModel?.email ?? 'farmer@email.com';
-
     return Scaffold(
       backgroundColor: backgroundLight,
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Profile Section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-              child: _buildProfileCard(userName, userEmail),
-            ),
-
-            // Settings List
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Section Header
+                  const SizedBox(height: 24),
+
+                  // Profile Header Card
                   Padding(
-                    padding: const EdgeInsets.only(left: 4, bottom: 12),
-                    child: Text(
-                      'GENERAL SETTINGS',
-                      style: TextStyle(
-                        color: primaryColor.withOpacity(0.6),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildProfileHeaderCard(),
                   ),
 
-                  // Settings Items Container
-                  _buildSettingsContainer(),
+                  const SizedBox(height: 16),
+
+                  // Farm Information Card
+                  if (crops.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildFarmInformationCard(),
+                    ),
+
+                  const SizedBox(height: 16),
+
+                  // Activity Overview Card
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildActivityOverviewCard(),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Edit Profile Button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildEditProfileButton(),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Logout Button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildLogoutButton(),
+                  ),
+
+                  const SizedBox(height: 90), // Space for bottom nav
                 ],
               ),
             ),
-
-            // Logout Button
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 32, 16, 0),
-              child: _buildLogoutButton(authProvider),
-            ),
-
-            // Footer
-            _buildFooter(),
-
-            const SizedBox(height: 90), // Space for bottom nav
-          ],
-        ),
-      ),
     );
+  }
+
+  /// Load user data from Firestore
+  Future<void> _loadUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() => isLoading = false);
+        return;
+      }
+
+      // Fetch user document
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+
+        setState(() {
+          userName = data['name'] ?? 'User';
+          userEmail = data['email'] ?? user.email ?? '';
+          locationName = data['locationName'] ?? 'Location not set';
+          profileImageUrl = data['profileImageUrl'];
+          landSize = data['landSize'];
+          farmingType = data['farmingType'];
+
+          // Handle crops array
+          if (data['crops'] != null && data['crops'] is List) {
+            crops = List<String>.from(data['crops']);
+          } else if (data['cropType'] != null) {
+            crops = [data['cropType']];
+          }
+
+          // Handle roles array
+          if (data['roles'] != null && data['roles'] is List) {
+            roles = List<String>.from(data['roles']);
+          }
+        });
+      }
+
+      // Load activity statistics
+      await _loadActivityStats(user.uid);
+
+      setState(() => isLoading = false);
+    } catch (e) {
+      print('❌ Error loading user data: $e');
+      setState(() => isLoading = false);
+    }
+  }
+
+  /// Load activity statistics from Firestore
+  Future<void> _loadActivityStats(String uid) async {
+    try {
+      // Count products listed by user
+      final productsSnapshot = await FirebaseFirestore.instance
+          .collection('products')
+          .where('ownerId', isEqualTo: uid)
+          .get();
+      productsCount = productsSnapshot.docs.length;
+
+      // Count rental bookings
+      final rentalsSnapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('renterId', isEqualTo: uid)
+          .get();
+      rentalsCount = rentalsSnapshot.docs.length;
+
+      // Count orders (if orders collection exists)
+      try {
+        final ordersSnapshot = await FirebaseFirestore.instance
+            .collection('orders')
+            .where('sellerId', isEqualTo: uid)
+            .get();
+        ordersCount = ordersSnapshot.docs.length;
+      } catch (e) {
+        // Orders collection might not exist yet
+        ordersCount = 0;
+      }
+    } catch (e) {
+      print('❌ Error loading activity stats: $e');
+    }
+  }
+
+  /// Handle profile image upload
+  Future<void> _uploadProfileImage() async {
+    try {
+      // Show image source selection
+      final ImageSource? source = await showDialog<ImageSource>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Select Image Source'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (source == null) return;
+
+      // Pick image
+      final XFile? image = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (image == null) return;
+
+      setState(() => isUploadingImage = true);
+
+      // Upload to Cloudinary
+      final imageFile = File(image.path);
+      final imageUrl = await _cloudinaryService.uploadImage(imageFile);
+
+      if (imageUrl != null) {
+        // Update Firestore
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .update({'profileImageUrl': imageUrl});
+
+          setState(() {
+            profileImageUrl = imageUrl;
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('✅ Profile image updated')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Error uploading profile image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to upload image: $e')));
+      }
+    } finally {
+      setState(() => isUploadingImage = false);
+    }
   }
 
   PreferredSizeWidget _buildAppBar() {
@@ -101,12 +282,8 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: primaryColor,
       elevation: 4,
       shadowColor: Colors.black26,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
-        onPressed: () => Navigator.pop(context),
-      ),
       title: const Text(
-        'Profile & Settings',
+        'Profile',
         style: TextStyle(
           color: Colors.white,
           fontSize: 18,
@@ -114,200 +291,425 @@ class _ProfilePageState extends State<ProfilePage> {
           letterSpacing: -0.5,
         ),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.more_vert, color: Colors.white),
-          onPressed: () {
-            // Handle more options
-          },
-        ),
-      ],
     );
   }
 
-  Widget _buildProfileCard(String userName, String userEmail) {
+  Widget _buildProfileHeaderCard() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          // Avatar
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.person, color: primaryColor, size: 48),
+          // Avatar with upload capability
+          Stack(
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                  image: profileImageUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(profileImageUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: profileImageUrl == null
+                    ? const Icon(Icons.person, color: primaryColor, size: 50)
+                    : null,
+              ),
+              if (isUploadingImage)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+                  ),
+                ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: _uploadProfileImage,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 16),
 
-          // Name
+          // User Name
           Text(
             userName,
             style: const TextStyle(
               color: Colors.black87,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
               height: 1.2,
             ),
+            textAlign: TextAlign.center,
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
 
           // Email
           Text(
             userEmail,
             style: TextStyle(
-              color: primaryColor.withOpacity(0.7),
+              color: Colors.grey[600],
               fontSize: 14,
               fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 12),
+
+          // Location
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.location_on, color: primaryColor, size: 18),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  locationName,
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+
+          // Role Badges
+          if (roles.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: roles.map((role) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: primaryColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Text(
+                    role,
+                    style: const TextStyle(
+                      color: primaryColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFarmInformationCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title
+          Text(
+            'Farm Information',
+            style: TextStyle(
+              color: primaryColor,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
 
           const SizedBox(height: 16),
 
-          // Edit Profile Button
-          SizedBox(
-            width: 160,
-            child: OutlinedButton(
-              onPressed: () {
-                // Handle edit profile
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: primaryColor,
-                side: const BorderSide(color: primaryColor, width: 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          // Crops Section
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.grass, color: primaryColor, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Crops',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: crops.map((crop) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            crop,
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              child: const Text(
-                'Edit Profile',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-              ),
-            ),
+            ],
           ),
+
+          // Land Size (if available)
+          if (landSize != null) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.straighten, color: primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Land Size: ',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+                Text(
+                  landSize!,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          // Farming Type (if available)
+          if (farmingType != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.eco, color: primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Farming Type: ',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+                Text(
+                  farmingType!,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildSettingsContainer() {
+  Widget _buildActivityOverviewCard() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      padding: const EdgeInsets.all(20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSettingItem(
-            icon: Icons.person_outline,
-            title: 'Account Information',
-            onTap: () {
-              // Handle account info
-            },
-            showDivider: true,
+          // Title
+          Text(
+            'Activity Overview',
+            style: TextStyle(
+              color: primaryColor,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          _buildSettingItem(
-            icon: Icons.lock_outline,
-            title: 'Change Password',
-            onTap: () {
-              Navigator.pushNamed(context, AppRoutes.resetPassword);
-            },
-            showDivider: true,
-          ),
-          _buildSettingItem(
-            icon: Icons.notifications_outlined,
-            title: 'Notification Settings',
-            onTap: () {
-              // Handle notifications
-            },
-            showDivider: true,
-          ),
-          _buildSettingItem(
-            icon: Icons.help_outline,
-            title: 'Help & Support',
-            onTap: () {
-              // Handle help
-            },
-            showDivider: false,
+
+          const SizedBox(height: 20),
+
+          // Statistics Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem(
+                icon: Icons.shopping_bag,
+                label: 'Products\nListed',
+                value: productsCount.toString(),
+                color: Colors.blue,
+              ),
+              Container(width: 1, height: 50, color: Colors.grey[300]),
+              _buildStatItem(
+                icon: Icons.calendar_today,
+                label: 'Rental\nBookings',
+                value: rentalsCount.toString(),
+                color: Colors.orange,
+              ),
+              Container(width: 1, height: 50, color: Colors.grey[300]),
+              _buildStatItem(
+                icon: Icons.check_circle,
+                label: 'Orders\nCompleted',
+                value: ordersCount.toString(),
+                color: Colors.green,
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSettingItem({
+  Widget _buildStatItem({
     required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    required bool showDivider,
+    required String label,
+    required String value,
+    required Color color,
   }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: showDivider
-              ? Border(bottom: BorderSide(color: Colors.grey[100]!, width: 1))
-              : null,
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: color, size: 24),
         ),
-        child: Row(
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(color: Colors.grey[600], fontSize: 11, height: 1.2),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditProfileButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: () {
+          // TODO: Navigate to edit profile page
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Edit Profile feature coming soon!')),
+          );
+        },
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primaryColor,
+          side: const BorderSide(color: primaryColor, width: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Icon Container
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: primaryColor, size: 24),
+            Icon(Icons.edit, size: 20),
+            SizedBox(width: 8),
+            Text(
+              'Edit Profile',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-
-            const SizedBox(width: 16),
-
-            // Title
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-
-            // Arrow
-            Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLogoutButton(AuthProvider authProvider) {
+  Widget _buildLogoutButton() {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -318,6 +720,9 @@ class _ProfilePageState extends State<ProfilePage> {
             builder: (context) => AlertDialog(
               title: const Text('Logout'),
               content: const Text('Are you sure you want to logout?'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
@@ -333,7 +738,7 @@ class _ProfilePageState extends State<ProfilePage> {
           );
 
           if (shouldLogout == true && mounted) {
-            await authProvider.signOut();
+            await FirebaseAuth.instance.signOut();
             if (mounted) {
               Navigator.pushNamedAndRemoveUntil(
                 context,
@@ -346,16 +751,16 @@ class _ProfilePageState extends State<ProfilePage> {
         style: ElevatedButton.styleFrom(
           backgroundColor: logoutRed,
           foregroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: logoutRed.withOpacity(0.3),
+          elevation: 3,
+          shadowColor: logoutRed.withValues(alpha: 0.4),
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
-        child: Row(
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Icon(Icons.logout, size: 20),
             SizedBox(width: 8),
             Text(
@@ -364,30 +769,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildFooter() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 32, bottom: 40),
-      child: Column(
-        children: [
-          Text(
-            'Uzhavu Sei AI',
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Version 1.0.0',
-            style: TextStyle(color: Colors.grey[400], fontSize: 12),
-          ),
-        ],
       ),
     );
   }

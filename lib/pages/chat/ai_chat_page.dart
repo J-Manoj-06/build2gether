@@ -68,13 +68,43 @@ class _AIChatPageState extends State<AIChatPage> {
     });
   }
 
-  /// Save language preference
+  /// Save language preference and update welcome message
   Future<void> _saveLanguagePreference(String language) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('ai_chat_language', language);
     setState(() {
       _selectedLanguage = language;
     });
+
+    // Update only the first message (welcome message) if it exists
+    if (_messages.isNotEmpty && !_messages[0].isUser) {
+      setState(() {
+        _messages[0] = ChatMessage(
+          text: _getWelcomeMessage(language),
+          isUser: false,
+          timestamp: _messages[0].timestamp,
+        );
+      });
+      await _cacheService.saveMessages(_messages);
+    }
+  }
+
+  /// Get welcome message in selected language
+  String _getWelcomeMessage(String language) {
+    switch (language) {
+      case 'தமிழ் (Tamil)':
+        return 'வணக்கம்! நான் உங்கள் செயற்கை நுண்ணறிவு வேளாண்மை ஆலோசகர். உங்கள் பயிர்கள் இன்று எப்படி இருக்கின்றன? நோய் கண்டறிதல், பூச்சி கட்டுப்பாடு, உர பரிந்துரைகள் மற்றும் பலவற்றில் என்னால் உதவ முடியும்.';
+      case 'हिंदी (Hindi)':
+        return 'नमस्ते! मैं आपका AI कृषि सलाहकार हूं। आज आपकी फसलें कैसी हैं? मैं बीमारी निदान, कीट नियंत्रण, उर्वरक सिफारिशों और बहुत कुछ में मदद कर सकता हूं।';
+      case 'తెలుగు (Telugu)':
+        return 'నమస్కారం! నేను మీ AI వ్యవసాయ సలహాదారుని. ఈ రోజు మీ పంటలు ఎలా ఉన్నాయి? వ్యాధి నిర్ధారణ, తెగులు నియంత్రణ, ఎరువుల సిఫార్సులు మరియు మరిన్నింటిలో నేను సహాయం చేయగలను.';
+      case 'ಕನ್ನಡ (Kannada)':
+        return 'ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ AI ಕೃಷಿ ಸಲಹೆಗಾರ. ಇಂದು ನಿಮ್ಮ ಬೆಳೆಗಳು ಹೇಗಿವೆ? ರೋಗ ನಿರ್ಣಯ, ಕೀಟ ನಿಯಂತ್ರಣ, ಗೊಬ್ಬರ ಶಿಫಾರಸುಗಳು ಮತ್ತು ಹೆಚ್ಚಿನವುಗಳಲ್ಲಿ ನಾನು ಸಹಾಯ ಮಾಡಬಲ್ಲೆ.';
+      case 'മലയാളം (Malayalam)':
+        return 'നമസ്കാരം! ഞാൻ നിങ്ങളുടെ AI കാർഷിക ഉപദേഷ്ടാവാണ്. ഇന്ന് നിങ്ങളുടെ വിളകൾ എങ്ങനെയുണ്ട്? രോഗനിർണയം, കീട നിയന്ത്രണം, വളം ശുപാർശകൾ എന്നിവയിലും അതിലധികവും സഹായിക്കാൻ എനിക്ക് കഴിയും.';
+      default: // English
+        return 'Hello! I am your AI agricultural advisor. How are your crops doing today? I can help with disease diagnosis, pest control, fertilizer recommendations, and more.';
+    }
   }
 
   /// Load cached chat history on startup
@@ -86,8 +116,7 @@ class _AIChatPageState extends State<AIChatPage> {
       setState(() {
         _messages = [
           ChatMessage(
-            text:
-                'Hello! I am your AI agricultural advisor. How are your crops doing today? I can help with disease diagnosis, pest control, fertilizer recommendations, and more.',
+            text: _getWelcomeMessage(_selectedLanguage),
             isUser: false,
             timestamp: DateTime.now(),
           ),
@@ -237,8 +266,7 @@ class _AIChatPageState extends State<AIChatPage> {
       setState(() {
         _messages = [
           ChatMessage(
-            text:
-                'Hello! I am your AI agricultural advisor. How can I help you today?',
+            text: _getWelcomeMessage(_selectedLanguage),
             isUser: false,
             timestamp: DateTime.now(),
           ),
@@ -358,39 +386,56 @@ class _AIChatPageState extends State<AIChatPage> {
                 ),
               ),
 
-              // Language Selector
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: DropdownButton<String>(
-                  value: _selectedLanguage,
-                  icon: const Icon(
+              // Language Selector (Icon Only)
+              PopupMenuButton<String>(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
                     Icons.language,
                     color: Colors.white,
-                    size: 18,
+                    size: 20,
                   ),
-                  dropdownColor: primaryColor,
-                  underline: const SizedBox(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  items: _languages.map((lang) {
-                    return DropdownMenuItem<String>(
-                      value: lang['name'],
-                      child: Text(lang['name']!),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      _saveLanguagePreference(value);
-                    }
-                  },
                 ),
+                tooltip: _selectedLanguage,
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                itemBuilder: (context) => _languages.map((lang) {
+                  return PopupMenuItem<String>(
+                    value: lang['name'],
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check,
+                          size: 18,
+                          color: _selectedLanguage == lang['name']
+                              ? primaryColor
+                              : Colors.transparent,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          lang['name']!,
+                          style: TextStyle(
+                            color: _selectedLanguage == lang['name']
+                                ? primaryColor
+                                : Colors.black87,
+                            fontWeight: _selectedLanguage == lang['name']
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onSelected: (value) {
+                  _saveLanguagePreference(value);
+                },
               ),
 
               const SizedBox(width: 8),
