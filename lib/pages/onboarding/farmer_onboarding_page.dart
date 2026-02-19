@@ -22,7 +22,7 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
   final _landSizeController = TextEditingController();
-  
+
   // Multi-crop selection
   final List<String> _selectedCrops = [];
   final TextEditingController _customCropController = TextEditingController();
@@ -157,7 +157,7 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
       );
       return;
     }
-    
+
     // Check if crops are selected when needed
     if (_needsCropField() && _selectedCrops.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -236,7 +236,9 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
       if (_needsCropField()) {
         profileData['crops'] = _selectedCrops;
         // Also save first crop as cropType for backwards compatibility
-        profileData['cropType'] = _selectedCrops.isNotEmpty ? _selectedCrops.first : 'General';
+        profileData['cropType'] = _selectedCrops.isNotEmpty
+            ? _selectedCrops.first
+            : 'General';
       }
       if (_needsLandSize()) {
         profileData['landSize'] = _landSizeController.text.trim();
@@ -750,7 +752,7 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
       ),
     );
   }
-  
+
   /// Build crop selection section with chips
   Widget _buildCropSelectionSection() {
     // Available crop options
@@ -778,7 +780,11 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
           children: [
             Row(
               children: [
-                Icon(Icons.eco_outlined, size: 20, color: const Color(0xFF1B5E20)),
+                Icon(
+                  Icons.eco_outlined,
+                  size: 20,
+                  color: const Color(0xFF1B5E20),
+                ),
                 const SizedBox(width: 8),
                 const Text(
                   'Select Your Crops',
@@ -793,13 +799,10 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
             const SizedBox(height: 4),
             Text(
               'Choose all crops you grow',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
             const SizedBox(height: 12),
-            
+
             // Crop chips
             Wrap(
               spacing: 8,
@@ -824,16 +827,22 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
                     selectedColor: const Color(0xFFE8F5E9),
                     checkmarkColor: const Color(0xFF1B5E20),
                     labelStyle: TextStyle(
-                      color: isSelected ? const Color(0xFF1B5E20) : Colors.grey[700],
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected
+                          ? const Color(0xFF1B5E20)
+                          : Colors.grey[700],
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                     side: BorderSide(
-                      color: isSelected ? const Color(0xFF1B5E20) : Colors.grey[300]!,
+                      color: isSelected
+                          ? const Color(0xFF1B5E20)
+                          : Colors.grey[300]!,
                       width: isSelected ? 2 : 1,
                     ),
                   );
                 }).toList(),
-                
+
                 // Add custom crop button
                 ActionChip(
                   label: const Row(
@@ -851,12 +860,15 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
                 ),
               ],
             ),
-            
+
             // Show selected count
             if (_selectedCrops.isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8F5E9),
                   borderRadius: BorderRadius.circular(8),
@@ -887,17 +899,15 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
       ),
     );
   }
-  
+
   /// Show dialog to add custom crop
   void _showAddCustomCropDialog() {
     _customCropController.clear();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
             Icon(Icons.eco, color: Color(0xFF1B5E20)),
@@ -910,15 +920,10 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
           decoration: InputDecoration(
             labelText: 'Crop Name',
             hintText: 'e.g., Turmeric, Pulses',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: Color(0xFF1B5E20),
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: Color(0xFF1B5E20), width: 2),
             ),
           ),
           textCapitalization: TextCapitalization.words,
@@ -927,10 +932,7 @@ class _FarmerOnboardingPageState extends State<FarmerOnboardingPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
           ),
           ElevatedButton(
             onPressed: () {

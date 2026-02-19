@@ -11,6 +11,7 @@ import '../ai/find_buyers_page.dart';
 import '../chat/ai_chat_page.dart';
 import '../marketplace/add_product_page.dart';
 import '../rent/farmer_rent_page.dart';
+import '../market/price_trends_page.dart';
 
 class DynamicHomePage extends StatefulWidget {
   const DynamicHomePage({super.key});
@@ -329,7 +330,12 @@ class _DynamicHomePageState extends State<DynamicHomePage> {
                 title: 'Price Trends',
                 icon: Icons.trending_up,
                 color: const Color(0xFF42A5F5),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PriceTrendsPage()),
+                  );
+                },
               ),
             ),
           ],

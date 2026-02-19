@@ -68,18 +68,18 @@ class _MarketplacePageState extends State<MarketplacePage> {
       _userLat = profile['latitude'] as double?;
       _userLng = profile['longitude'] as double?;
       _currentUserId = _userService.getCurrentUserId();
-      
+
       // Get crops array (new system)
       if (profile['crops'] != null && profile['crops'] is List) {
         _crops = List<String>.from(profile['crops']);
-      } 
+      }
       // Fallback to old system for backwards compatibility
       else if (profile['cropType'] != null) {
         _crops = [profile['cropType'] as String];
       } else {
         _crops = ['General'];
       }
-      
+
       _location = profile['location'] as String? ?? 'Unknown';
 
       // Load AI recommendations in parallel

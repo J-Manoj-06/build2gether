@@ -58,19 +58,19 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
         setState(() {
           _farmerLat = (data['latitude'] ?? 0).toDouble();
           _farmerLng = (data['longitude'] ?? 0).toDouble();
-          
+
           // Get crops array (new system)
           if (data['crops'] != null && data['crops'] is List) {
             _farmerCrops = List<String>.from(data['crops']);
-          } 
+          }
           // Fallback to old system for backwards compatibility
           else if (data['primaryCrop'] != null) {
             _farmerCrops = [data['primaryCrop'] as String];
           }
-          
+
           _loadingProfile = false;
         });
-        
+
         print('DEBUG: Farmer crops loaded: $_farmerCrops');
       }
     } catch (e) {
@@ -139,7 +139,10 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
           : StreamBuilder<QuerySnapshot>(
               stream: _firestore
                   .collection('buyers')
-                  .where('cropInterested', whereIn: _farmerCrops.isEmpty ? [''] : _farmerCrops)
+                  .where(
+                    'cropInterested',
+                    whereIn: _farmerCrops.isEmpty ? [''] : _farmerCrops,
+                  )
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
@@ -159,11 +162,18 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
 
                 // Process nearby buyers
                 final nearbyBuyers = _processNearbyBuyers(buyers);
-                
+
                 // Apply crop filter if selected
-                final filteredBuyers = _selectedCropFilter == null || _selectedCropFilter == 'All Crops'
+                final filteredBuyers =
+                    _selectedCropFilter == null ||
+                        _selectedCropFilter == 'All Crops'
                     ? nearbyBuyers
-                    : nearbyBuyers.where((buyer) => buyer.cropInterested == _selectedCropFilter).toList();
+                    : nearbyBuyers
+                          .where(
+                            (buyer) =>
+                                buyer.cropInterested == _selectedCropFilter,
+                          )
+                          .toList();
 
                 if (filteredBuyers.isEmpty) {
                   return _buildEmptyState();
@@ -173,7 +183,7 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                   children: [
                     // Crop filter dropdown
                     _buildCropFilterDropdown(),
-                    
+
                     // AI Suggestion Card
                     Container(
                       width: double.infinity,
@@ -242,7 +252,8 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                       child: Row(
                         children: [
                           Text(
-                            _selectedCropFilter == null || _selectedCropFilter == 'All Crops'
+                            _selectedCropFilter == null ||
+                                    _selectedCropFilter == 'All Crops'
                                 ? 'All Crop Buyers'
                                 : 'Buyers for $_selectedCropFilter',
                             style: const TextStyle(
@@ -427,7 +438,7 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
       ),
     );
   }
-  
+
   /// Build crop filter dropdown
   Widget _buildCropFilterDropdown() {
     return Container(
@@ -461,10 +472,7 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
                     child: Text('All Crops'),
                   ),
                   ..._farmerCrops.map((crop) {
-                    return DropdownMenuItem(
-                      value: crop,
-                      child: Text(crop),
-                    );
+                    return DropdownMenuItem(value: crop, child: Text(crop));
                   }).toList(),
                 ],
                 onChanged: (value) {
@@ -502,10 +510,7 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
             Text(
               'Please complete your profile and add crops to find buyers.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 15,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 15, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -515,10 +520,11 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
 
   /// Build empty state
   Widget _buildEmptyState() {
-    final cropText = _selectedCropFilter == null || _selectedCropFilter == 'All Crops'
+    final cropText =
+        _selectedCropFilter == null || _selectedCropFilter == 'All Crops'
         ? 'your crops'
         : _selectedCropFilter!;
-    
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -539,19 +545,13 @@ class _FindBuyersPageState extends State<FindBuyersPage> {
             Text(
               'No buyers nearby for $cropText within 20 km.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 15,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 15, color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
             Text(
               'Try checking back later or expand your search area.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[500],
-              ),
+              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
             ),
           ],
         ),
