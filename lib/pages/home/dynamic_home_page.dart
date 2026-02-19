@@ -10,7 +10,12 @@ import '../../models/user_role.dart';
 import '../ai/find_buyers_page.dart';
 import '../chat/ai_chat_page.dart';
 import '../marketplace/add_product_page.dart';
+import '../marketplace/marketplace_page.dart';
+import '../seller/my_listings_page.dart';
+import '../seller/sales_analytics_page.dart';
 import '../rent/farmer_rent_page.dart';
+import '../rent/my_equipment_page.dart';
+import '../rent/rental_requests_page.dart';
 import '../market/price_trends_page.dart';
 
 class DynamicHomePage extends StatefulWidget {
@@ -321,7 +326,12 @@ class _DynamicHomePageState extends State<DynamicHomePage> {
                 title: 'Available Crops',
                 icon: Icons.grass,
                 color: const Color(0xFF1E88E5),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MarketplacePage()),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -381,7 +391,12 @@ class _DynamicHomePageState extends State<DynamicHomePage> {
                 title: 'My Listings',
                 icon: Icons.inventory_2,
                 color: const Color(0xFFFF6F00),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MyListingsPage()),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -390,7 +405,14 @@ class _DynamicHomePageState extends State<DynamicHomePage> {
                 title: 'Sales Analytics',
                 icon: Icons.analytics,
                 color: const Color(0xFFFF8F00),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SalesAnalyticsPage(),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -436,7 +458,12 @@ class _DynamicHomePageState extends State<DynamicHomePage> {
                 title: 'My Equipment',
                 icon: Icons.build,
                 color: const Color(0xFF8E24AA),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MyEquipmentPage()),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -445,7 +472,14 @@ class _DynamicHomePageState extends State<DynamicHomePage> {
                 title: 'Rental Requests',
                 icon: Icons.request_page,
                 color: const Color(0xFFAB47BC),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const RentalRequestsPage(),
+                    ),
+                  );
+                },
               ),
             ),
           ],
